@@ -79,4 +79,19 @@ class BackupInitializerTest {
         new BackupInitializer().initialize(contextWith(env));
         assertThat(Files.exists(tempDir.resolve("backups"))).isFalse();
     }
+
+    @Test
+    void 未绑定属性时回退默认库路径而非静默跳过() {
+        // U10 真机验收发现：application.yml 不含 omniforge.persistence.* 时（生产常态），
+        // 旧实现直接 return → 升级自动备份在真实环境永不触发。回退默认值 = 生产装配同源。
+        StandardEnvironment env = env(Map.of("unrelated.key", "x"));
+        var result = org.springframework.boot.context.properties.bind.Binder.get(env)
+                .bind("omniforge.persistence", com.omniforge.core.persistence.PersistenceProperties.class);
+        assertThat(result.isBound()).isFalse();
+
+        com.omniforge.core.persistence.PersistenceProperties resolved =
+                BackupInitializer.resolveProperties(result);
+        assertThat(resolved.getDatabaseFile()).endsWith("omniforge.db");
+        assertThat(resolved.isInMemory()).isFalse();
+    }
 }

@@ -29,10 +29,10 @@ public class BackupInitializer implements ApplicationContextInitializer<Configur
             Binder binder = Binder.get(context.getEnvironment());
             BindResult<PersistenceProperties> persistence = binder.bind(
                     "omniforge.persistence", PersistenceProperties.class);
-            if (!persistence.isBound()) {
-                return; // 未装配（理论不发生在 GUI/headless；不强行备份）
-            }
-            PersistenceProperties properties = persistence.get();
+            // 未绑定 ≠ 未装配：生产环境库路径来自类内默认值（defaultConfigDir/omniforge.db，
+            // 与 @EnableConfigurationProperties 装配同源），application.yml 通常不含该前缀——
+            // 直接 return 会让升级自动备份在生产永不触发（U10 真机验收发现），故回退默认值
+            PersistenceProperties properties = resolveProperties(persistence);
             if (properties.isInMemory()) {
                 return; // :memory: 测试库无需备份
             }
@@ -49,5 +49,10 @@ public class BackupInitializer implements ApplicationContextInitializer<Configur
             // 备份失败绝不让应用无法启动（保留策略是增强不是阻塞）
             log.warn("升级自动备份跳过：{}", e.getMessage());
         }
+    }
+
+    /** 绑定结果解析：显式配置优先；未绑定时回退类内默认值（生产装配同源，勿静默跳过） */
+    static PersistenceProperties resolveProperties(BindResult<PersistenceProperties> bound) {
+        return bound.isBound() ? bound.get() : new PersistenceProperties();
     }
 }
