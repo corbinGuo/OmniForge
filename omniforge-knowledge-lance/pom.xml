@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omniforge</groupId>
+        <artifactId>omniforge-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omniforge-knowledge-lance</artifactId>
+    <name>OmniForge Knowledge Lance</name>
+    <description>⚠️ 已归档（2026-09）：LanceDB 官方 Java SDK 停止本地嵌入支持（详见 docs/LANCE_RETIRED.md），
+        本模块冻结为设计历史，不再进入构建 reactor。持久化由 SqliteVectorStore 承担。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-knowledge</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- LanceDB Java 客户端（Apache 2.0）。注意：本机 aliyun 镜像缺失该构件，
+             经 central-direct 直连下载。0.19.1 在 Central 不存在（2026-09 实证），
+             以最新 final 0.38.0 为准（API 随编译验证修正） -->
+        <dependency>
+            <groupId>com.lancedb</groupId>
+            <artifactId>lancedb-core</artifactId>
+            <version>0.38.0-final.0</version>
+            <!-- 传递的 log4j2 2.25.3 与项目 Boot BOM 管理的 SLF4J 绑定冲突，排除后由项目统一版本提供 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j2-impl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+
+    <!-- 与 mirrorOf=central 不同的仓库 id，绕过 settings.xml 的 aliyun 镜像直连中央仓库 -->
+    <repositories>
+        <repository>
+            <id>central-direct</id>
+            <name>Maven Central (direct, for LanceDB)</name>
+            <url>https://repo1.maven.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+</project>

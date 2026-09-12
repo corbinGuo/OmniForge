@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.omniforge</groupId>
+    <artifactId>omniforge-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>OmniForge Parent</name>
+    <description>OmniForge Core 社区版 - 跨平台、多智能体协作 AI 工作台</description>
+    <url>https://github.com/omniforge/omniforge</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <!-- 开源模块清单（v5.1 决议 #2：闭源模块 omniforge-pro / omniforge-enterprise-server
+         不进入本仓库，通过 Maven 私服或本地 profile 引入，见文件底部注释示例） -->
+    <modules>
+        <module>omniforge-common</module>
+        <module>omniforge-core</module>
+        <module>omniforge-tools</module>
+        <module>omniforge-knowledge</module>
+        <module>omniforge-gateway</module>
+        <module>omniforge-ui</module>
+        <module>omniforge-app</module>
+    </modules>
+
+    <profiles>
+        <!-- Python 互操作（JEP，zlib 许可）：默认不构建（JEP 原生库与平台绑定）；
+             需要 python_interpreter 工具时执行 mvn -P python verify -->
+        <profile>
+            <id>python</id>
+            <modules>
+                <module>omniforge-tools-python</module>
+            </modules>
+        </profile>
+        <!-- 注：LanceDB 持久化向量存储已于 2026-09 归档（官方 Java SDK 停止本地嵌入支持），
+             持久化改为 SQLite（omniforge-knowledge 主模块），详见 docs/LANCE_RETIRED.md -->
+    </profiles>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>21</java.version>
+        <maven.compiler.release>21</maven.compiler.release>
+
+        <!-- 版本基线（2026-08）：Spring Boot 3.5.x + Spring AI 1.1.2 + Spring AI Alibaba 1.1.2.x，
+             详见 docs/ARCHITECTURE.md 第 8 节 -->
+        <spring-boot.version>3.5.4</spring-boot.version>
+        <spring-ai.version>1.1.2</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.2.1</spring-ai-alibaba.version>
+        <javafx.version>21.0.5</javafx.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- 构建前置校验：JDK 21+ / Maven 3.9+，不符合时给出清晰报错（需求 9.1 硬性约束） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-java-version</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[21,)</version>
+                                    <message>OmniForge 要求 JDK 21+（虚拟线程），请安装 Temurin 21 并设置 JAVA_HOME 后重试</message>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.9,)</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <release>${maven.compiler.release}</release>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.2</version>
+                </plugin>
+                <!-- 运行 GUI：cd omniforge-app && mvn javafx:run（须先 mvn install 安装模块间依赖） -->
+                <plugin>
+                    <groupId>org.openjfx</groupId>
+                    <artifactId>javafx-maven-plugin</artifactId>
+                    <version>0.0.8</version>
+                    <configuration>
+                        <mainClass>com.omniforge.app.OmniForgeLauncher</mainClass>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <!-- 国内网络环境可用的镜像仓库（Spring AI Alibaba 部分版本在中央仓库解析不稳定）；
+         网络正常时可整段删除 -->
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <!-- 闭源模块引入示例（v5.1 决议 #2）：
+         方案 A（推荐）：将 omniforge-pro-x.y.z.jar 部署至私有 Nexus，在依赖模块中正常声明依赖；
+         方案 B：使用下方 profile 配合 system scope（jar 放 libs/ 目录，仅随私有构建分发）。
+
+    <profiles>
+        <profile>
+            <id>pro</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.omniforge</groupId>
+                    <artifactId>omniforge-pro</artifactId>
+                    <version>0.1.0</version>
+                    <scope>system</scope>
+                    <systemPath>${project.basedir}/libs/omniforge-pro.jar</systemPath>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+    -->
+</project>

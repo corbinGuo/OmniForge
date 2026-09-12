@@ -1,0 +1,8 @@
+com.omniforge.core.gateway.ModelGatewayAutoConfiguration
+com.omniforge.core.agent.AgentAutoConfiguration
+com.omniforge.core.context.ContextManagerAutoConfiguration
+com.omniforge.core.persistence.PersistenceAutoConfiguration
+com.omniforge.core.agent.plugin.PluginAutoConfiguration
+com.omniforge.core.gateway.router.RouterAutoConfiguration
+com.omniforge.core.audit.AuditAutoConfiguration
+com.omniforge.core.retention.RetentionAutoConfiguration

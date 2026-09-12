@@ -1,0 +1,825 @@
+/* ============================================================
+   OmniForge 视觉规范 v3（docs/UI_DESIGN.md）
+   品牌主色 #2563EB · 悬停加深 #1D4ED8 · 圆角：按钮/输入 8、卡片/气泡 12
+
+   主题机制：所有颜色经 .root 的 -of-* 令牌（looked-up colors）间接引用；
+   暗色为默认值（本文件），明亮主题由 app-light.css 仅覆盖令牌值。
+   ============================================================ */
+
+.root {
+    /* ---------- 主题令牌（暗色默认） ---------- */
+    /* 品牌色可由 branding.yml themeColor 经品牌覆盖样式表改写 */
+    -of-brand: #2563eb;
+    -of-brand-hover: #1d4ed8;
+    -of-bg-root: #16161e;
+    -of-bg-nav: #1a1a24;
+    -of-bg-chat: #1a1a24;
+    -of-bg-input: #24242f;
+    -of-bg-menu: #24242f;
+    -of-bg-button: #2f2f3e;
+    -of-bg-button-hover: #3a3a4c;
+    -of-bg-bubble-assistant: #2d2d2d;
+    /* 用户气泡色（P0 三修：暗色用沉稳深蓝 #1E3A5F，避免与品牌蓝刺眼冲突） */
+    -of-bubble-user: #1e3a5f;
+    -of-bg-card: #22222e;
+    -of-bg-debate-column: #1e1e29;
+    -of-bg-error: #4a2530;
+    -of-bg-danger-hover: #3a2228;
+    -of-bg-success: #16302a;
+    -of-bg-error-solid: #3b1d22;
+    -of-border: #30303f;
+    -of-border-step: #2d4a8a;
+    -of-button-border: transparent;
+    /* 输入框边框（P0 二轮：暗色 #555 边界清晰，聚焦品牌色） */
+    -of-input-border: #555555;
+    -of-scroll-thumb: #3a3a4c;
+    /* 文字对比度（P0 二轮：正文 ≥ #E0E0E0，标题纯白，弱化文字提亮） */
+    -of-text: #eaeaf0;
+    -of-text-title: #ffffff;
+    -of-text-muted: #a8a8b8;
+    -of-text-prompt: #90909f;
+    -of-text-thinking: #93b4f5;
+    -of-text-step: #cdd6f4;
+    -of-text-error: #ffb3c0;
+    -of-danger: #e07a7a;
+    -of-step-error: #e07a7a;
+    -of-success-border: #34d399;
+    -of-error-border: #f87171;
+    -of-check-mark: #e8e8ef;
+
+    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: -of-bg-root;
+    -fx-focus-color: -of-brand;
+    /* 默认文字/列表文字底色（modena 默认黑字，暗色下不可见——P0 修复） */
+    -fx-text-background-color: -of-text;
+    -fx-control-inner-background: -of-bg-input;
+}
+
+/* ---------- 历史会话侧栏（问题一） ---------- */
+.history-sidebar {
+    -fx-background-color: -of-bg-nav;
+    -fx-border-color: transparent -of-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 10 8 10 8;
+}
+
+.history-tree {
+    -fx-background-color: transparent;
+}
+
+/* 长会话名触发水平滚动条（不该出现）：单元格文本本就截断，横向滚动无意义，
+   占位归零（竖向滚动条保留，条目真超出时才出现）。全名经单元格 tooltip 查看 */
+.history-tree .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+}
+
+.history-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text;
+    -fx-padding: 6 8 6 8;
+    -fx-background-radius: 6;
+}
+
+.history-tree .tree-cell:filled:hover {
+    -fx-background-color: -of-bg-button-hover;
+}
+
+.history-tree .tree-cell:filled:selected {
+    -fx-background-color: -of-brand;
+    -fx-text-fill: #ffffff;
+}
+
+.history-tree .tree-cell.history-group {
+    -fx-text-fill: -of-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 8 2 8;
+}
+
+/* 分组节点不可选中：保持弱化样式 */
+.history-tree .tree-cell.history-group:filled:hover,
+.history-tree .tree-cell.history-group:filled:selected {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text-muted;
+}
+
+/* ---------- 顶部导航栏 ---------- */
+.navbar {
+    -fx-background-color: -of-bg-nav;
+    -fx-border-color: transparent transparent -of-border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.nav-logo {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -of-brand;
+}
+
+/* ---------- 聊天区 ---------- */
+.chat-scroll,
+.chat-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.chat-scroll {
+    -fx-background-color: -of-bg-chat;
+}
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: -of-scroll-thumb;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+/* ---------- 空状态 ---------- */
+.empty-state {
+    -fx-background-color: transparent;
+}
+
+.empty-icon {
+    -fx-font-size: 36px;
+}
+
+.empty-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -of-text-title;
+}
+
+/* ---------- 气泡（DeepSeek 网页端风格：助手纯文本+操作按钮行，用户品牌气泡） ---------- */
+.bubble {
+    -fx-padding: 8 12 8 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: -of-text;
+    -fx-font-size: 13px;
+    /* 完全扁平化：任何状态下无边框、无焦点环，消除"输入框感"（P0 修复） */
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* 气泡 TextArea 去 chrome：内容区/视口/滚动区全透明，聚焦/悬停状态同样无边框 */
+.bubble.text-area,
+.bubble.text-area:focused,
+.bubble.text-area:hover,
+.bubble.text-area .content,
+.bubble.text-area .viewport,
+.bubble.text-area .scroll-pane,
+.bubble.text-area .scroll-pane .viewport {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-control-inner-background: transparent;
+}
+
+.bubble.text-area .content {
+    -fx-padding: 0;
+}
+
+/* 气泡内滚动条彻底移除：零尺寸 + 透明（仅透明会留下占位缝隙，P0 修复） */
+.bubble.text-area .scroll-bar,
+.bubble.text-area .scroll-bar:vertical,
+.bubble.text-area .scroll-bar:horizontal,
+.bubble.text-area .corner {
+    -fx-opacity: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
+    -fx-background-color: transparent;
+}
+
+/* 用户消息：品牌色气泡（白字）。
+   注意：必须排在 .bubble.text-area 透明规则之后（同优先级后者胜），
+   否则 2 类选择器会覆盖 1 类的 -of-brand，白字配透明底在明亮主题下不可见（P0 修复）。 */
+.bubble-user.text-area,
+.bubble-user.text-area:focused,
+.bubble-user.text-area:hover,
+.bubble-user.text-area .content,
+.bubble-user.text-area .viewport,
+.bubble-user.text-area .scroll-pane,
+.bubble-user.text-area .scroll-pane .viewport {
+    -fx-background-color: -of-bubble-user;
+    -fx-border-color: transparent;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.bubble-user {
+    -fx-text-fill: #ffffff;
+}
+
+/* 用户气泡微阴影（P0 二轮：层次感） */
+.bubble-user.text-area {
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.30), 10, 0, 1, 3);
+}
+
+/* 消息头像（P0 二轮：发送者标识） */
+.bubble-avatar {
+    -fx-font-size: 18px;
+    -fx-padding: 0 4 0 4;
+}
+
+/* 消息时间戳（P0 二轮：右下角小字半透明） */
+.bubble-time {
+    -fx-font-size: 10px;
+    -fx-text-fill: -of-text-muted;
+    -fx-opacity: 0.75;
+}
+
+.bubble-time-row {
+    -fx-padding: 0 2 0 2;
+}
+
+/* 助手消息：卡片底（P0 二轮：暗色 #2D2D2D / 明亮白色卡片，与聊天底色区分）+ 下方操作按钮行 */
+.bubble-assistant {
+    -fx-background-color: transparent;
+}
+
+.bubble-assistant.text-area,
+.bubble-assistant.text-area:focused,
+.bubble-assistant.text-area:hover,
+.bubble-assistant.text-area .content,
+.bubble-assistant.text-area .viewport,
+.bubble-assistant.text-area .scroll-pane,
+.bubble-assistant.text-area .scroll-pane .viewport {
+    -fx-background-color: -of-bg-bubble-assistant;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 12;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+/* 系统消息：居中弱化文本 */
+.bubble-system {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text-muted;
+    -fx-font-size: 12px;
+}
+
+.bubble-thinking {
+    -fx-text-fill: -of-text-thinking; /* 品牌色 #2563EB 的浅调，正在生成状态 */
+    -fx-font-style: italic;
+}
+
+.bubble-error {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text-error;
+}
+
+/* 悬停小复制按钮（用户气泡左侧） */
+.bubble-copy {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text-muted;
+    -fx-padding: 2 6 2 6;
+    -fx-font-size: 12px;
+    -fx-border-color: transparent;
+}
+
+.bubble-copy:hover {
+    -fx-background-color: -of-bg-button-hover;
+}
+
+/* 助手消息下方的操作按钮行（📋 复制 · 🔄 重新生成 · 🗑 删除） */
+.bubble-actions {
+    -fx-padding: 1 0 2 16;
+    -fx-spacing: 4;
+}
+
+.bubble-action {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 3 8 3 8;
+    -fx-background-radius: 6;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+
+.bubble-action:hover {
+    -fx-background-color: -of-bg-button-hover;
+    -fx-text-fill: -of-brand;
+}
+
+/* ---------- 步骤卡片（思考→行动→观察） ---------- */
+.step-card {
+    -fx-background-color: -of-bg-card;
+    -fx-background-radius: 12;
+    -fx-border-color: -of-border-step;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0, 0, 4);
+}
+
+.step-card .label {
+    -fx-text-fill: -of-text-step;
+    -fx-font-size: 12px;
+}
+
+.step-running {
+    -fx-opacity: 0.75;
+}
+
+.step-error {
+    -fx-border-color: -of-step-error;
+}
+
+/* ---------- 输入控件 ---------- */
+.text-field,
+.combo-box,
+.text-area {
+    -fx-background-color: -of-bg-input;
+    -fx-background-radius: 8;
+    -fx-text-fill: -of-text;
+    -fx-prompt-text-fill: -of-text-prompt;
+    /* 输入框边界（P0 二轮：暗色 #555 边界清晰，聚焦品牌色） */
+    -fx-border-color: -of-input-border;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.text-area .content {
+    -fx-background-color: -of-bg-input;
+    -fx-background-radius: 8;
+}
+
+.text-field:focused,
+.combo-box:focused,
+.text-area:focused {
+    -fx-border-color: -of-brand;
+    -fx-border-radius: 8;
+}
+
+/* 用户气泡白字必须后置于输入控件规则（同优先级后者胜）——
+   否则 -of-text 会覆盖 .bubble-user 的 #ffffff（P0 修复：蓝底黑字不可读） */
+.bubble-user.text-area {
+    -fx-text-fill: #ffffff;
+}
+
+/* ---------- 底部输入面板（P0 二轮：对话区与操作区分割线） ---------- */
+.input-panel {
+    -fx-border-color: -of-border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 0 0 0;
+    -fx-background-color: -of-bg-nav;
+}
+
+/* ---------- 滑动开关（UI 二轮 P1：品牌色激活态，暗色下关闭态用输入框边框色保证可见） ---------- */
+.toggle-switch {
+    -fx-color: #2563EB;
+}
+
+.toggle-switch .track {
+    -fx-fill: -of-input-border;
+}
+
+.toggle-switch:on .track {
+    -fx-fill: #2563EB;
+}
+
+.toggle-switch .knob {
+    -fx-fill: #ffffff;
+}
+
+.toggle-switch .label {
+    -fx-text-fill: -of-text;
+}
+
+/* ---------- 气泡悬停反馈（P2：阴影加深） ---------- */
+.bubble-user.text-area:hover {
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.45), 14, 0, 2, 5);
+}
+
+.combo-box > .list-cell {
+    -fx-text-fill: -of-text;
+}
+
+/* 下拉箭头：modena 默认深灰在暗色输入框上几乎不可见（P0 对比度修复） */
+.combo-box .arrow,
+.menu-button .arrow,
+.choice-box .arrow {
+    -fx-background-color: -of-text-muted;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -of-bg-menu;
+    -fx-background-radius: 8;
+    /* 选项完整显示（P0 修复：模型名称含提供商标识不截断） */
+    -fx-min-width: 260;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: -of-bg-menu;
+    -fx-text-fill: -of-text;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: -of-brand;
+}
+
+.check-box {
+    -fx-text-fill: -of-text;
+}
+
+.check-box .box {
+    -fx-background-color: -of-bg-input;
+    -fx-background-radius: 4;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: -of-check-mark;
+}
+
+.check-box:selected .box {
+    -fx-background-color: -of-brand;
+}
+
+/* ---------- 按钮 ---------- */
+.button {
+    -fx-background-color: -of-bg-button;
+    -fx-text-fill: -of-text;
+    -fx-background-radius: 8;
+    -fx-border-color: -of-button-border;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: -of-bg-button-hover;
+}
+
+.button.primary {
+    -fx-background-color: -of-brand;
+    /* 品牌按钮白字（P0 修复：此前继承 -of-text，蓝底黑字不可读） */
+    -fx-text-fill: #ffffff;
+}
+
+.button.primary:hover {
+    -fx-background-color: -of-brand-hover;
+    -fx-text-fill: #ffffff;
+}
+
+.button:disabled {
+    -fx-opacity: 0.5;
+}
+
+.button.danger {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-danger;
+}
+
+.button.danger:hover {
+    -fx-background-color: -of-bg-danger-hover;
+}
+
+.menu-button {
+    -fx-background-color: -of-bg-button;
+    -fx-background-radius: 8;
+}
+
+.menu-button > .label {
+    -fx-text-fill: -of-text;
+}
+
+.menu-button:hover {
+    -fx-background-color: -of-bg-button-hover;
+}
+
+.menu-item {
+    -fx-background-color: -of-bg-menu;
+}
+
+.menu-item .label {
+    -fx-text-fill: -of-text;
+}
+
+.menu-item:focused {
+    -fx-background-color: -of-brand;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+    -fx-padding: 10 16 10 16;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+    /* 文字跟随主题正文色：明亮主题下成功/失败底为浅色，白字会看不清（2026-09 用户反馈修复） */
+    -fx-text-fill: -of-text;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 16, 0, 0, 6);
+}
+
+.toast-success {
+    -fx-background-color: -of-bg-success;
+    -fx-border-color: -of-success-border;
+    -fx-border-radius: 8;
+}
+
+.toast-error {
+    -fx-background-color: -of-bg-error-solid;
+    -fx-border-color: -of-error-border;
+    -fx-border-radius: 8;
+}
+
+/* ---------- 状态栏与标签 ---------- */
+.status {
+    -fx-text-fill: -of-text-muted;
+    -fx-font-size: 13px;
+}
+
+.status-success {
+    -fx-text-fill: -of-success-border;
+    -fx-font-size: 13px;
+}
+
+.status-error {
+    -fx-text-fill: -of-error-border;
+    -fx-font-size: 13px;
+}
+
+/* ---------- 分节标题（EULA/配置中心各区段） ---------- */
+.header {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -of-brand;
+    -fx-padding: 6 0 2 0;
+}
+
+/* ---------- 提示气泡 Tooltip（暗色跟随主题，不再白底刺眼） ---------- */
+.tooltip {
+    -fx-background-color: -of-bg-menu;
+    -fx-text-fill: -of-text;
+    -fx-background-radius: 6;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 6;
+    -fx-padding: 6 8 6 8;
+    -fx-font-size: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 8, 0, 0, 3);
+}
+
+/* ---------- 辩论视图（多列流式） ---------- */
+.debate-view {
+    -fx-background-color: -of-bg-chat;
+}
+
+.debate-header {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -of-brand;
+}
+
+.debate-column {
+    -fx-background-color: -of-bg-debate-column;
+    -fx-background-radius: 10;
+    -fx-min-width: 220px;
+}
+
+.debate-round {
+    -fx-text-fill: -of-text-muted;
+    -fx-font-size: 12px;
+    -fx-alignment: center;
+}
+
+.debate-bubble {
+    -fx-font-size: 12px;
+    -fx-effect: null;
+}
+
+/* ---------- 配置中心卡片 ---------- */
+.config-card {
+    -fx-background-color: -of-bg-card;
+    -fx-background-radius: 12;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0, 0, 4);
+}
+
+.config-card .label {
+    -fx-text-fill: -of-text;
+}
+
+/* ---------- 列表视图（记录/知识库/会话管理，P0 对比度修复） ---------- */
+.list-view {
+    -fx-background-color: -of-bg-input;
+    -fx-background-radius: 8;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 8;
+}
+
+.list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -of-text;
+    -fx-padding: 8 10 8 10;
+}
+
+.list-view .list-cell:filled:hover {
+    -fx-background-color: -of-bg-button-hover;
+}
+
+.list-view .list-cell:filled:selected {
+    -fx-background-color: -of-brand;
+    -fx-text-fill: #ffffff;
+}
+
+/* ---------- 配置中心（Batch1：左栏模块导航 + 内容区） ---------- */
+.config-sidebar {
+    -fx-background-color: -of-bg-nav;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent -of-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 8;
+}
+
+.config-sidebar .list-cell {
+    -fx-padding: 10 12 10 12;
+}
+
+.config-scroll,
+.config-scroll > .viewport {
+    -fx-background-color: -of-bg-root;
+}
+
+/* 等宽字体（License 本机指纹等长串展示） */
+.mono {
+    -fx-font-family: Consolas, 'Courier New', monospace;
+    -fx-font-size: 12px;
+}
+
+/* ---------- 内建对话框（TextInputDialog 等，主题统一） ---------- */
+.dialog-pane {
+    -fx-background-color: -of-bg-card;
+}
+
+.dialog-pane > .content.label {
+    -fx-text-fill: -of-text;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: -of-bg-card;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: -of-text;
+}
+
+.dialog-pane > .button-bar > .container {
+    -fx-background-color: -of-bg-card;
+}
+
+/* ---------- 系统托盘自绘菜单（JavaFX 窗口，明暗随动） ---------- */
+.tray-menu {
+    -fx-background-color: -of-bg-card;
+    -fx-background-radius: 12;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 16, 0, 0, 6);
+    -fx-min-width: 150;
+}
+
+.tray-menu .button {
+    -fx-background-color: transparent;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 6 14 6 14;
+    -fx-border-color: transparent;
+}
+
+.tray-menu .button:hover {
+    -fx-background-color: -of-brand;
+    -fx-text-fill: #ffffff;
+}
+
+/* ---------- 右键/下拉菜单主题（明暗经 -of-* 令牌） ----------
+   根因：全局 -fx-text-background-color 提亮后，Modena 默认浅底菜单 → 白字浅底看不清。
+   显式给 .context-menu（ContextMenu 与 MenuButton 弹层共用）配色，明亮主题由 app-light.css 覆盖令牌。 */
+.context-menu {
+    -fx-background-color: -of-bg-menu;
+    -fx-background-radius: 8;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 8;
+    -fx-padding: 4 0 4 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0, 2, 4);
+}
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+}
+.context-menu .menu-item:hover,
+.context-menu .menu-item:focused {
+    -fx-background-color: -of-bg-button-hover;
+}
+.context-menu .menu-item > .label {
+    -fx-text-fill: -of-text;
+    -fx-font-size: 13px;
+}
+.context-menu .separator:horizontal .line {
+    -fx-border-color: -of-border transparent transparent transparent;
+}
+
+/* ============================================================
+   v4 质感层（2026-09-06，b：全局留白/字号/控件内距/行高）
+   覆盖在功能 token 之上，全页面统一收敛；不改变任何布局逻辑。
+   ============================================================ */
+
+.root {
+    -fx-font-size: 14px;
+}
+
+/* 控件呼吸感 */
+.button {
+    -fx-padding: 7px 18px 7px 18px;
+    -fx-background-radius: 8;
+}
+.toggle-button {
+    -fx-padding: 6px 14px 6px 14px;
+}
+.text-input, .text-area, .combo-box {
+    -fx-padding: 7px 10px 7px 10px;
+}
+.text-area .content {
+    -fx-padding: 8px;
+}
+
+/* 表格与列表行高更舒展 */
+.table-row-cell {
+    -fx-cell-size: 36px;
+}
+.table-view .column-header .label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -of-text-muted;
+}
+.list-cell {
+    -fx-cell-size: 34px;
+}
+.history-tree .tree-cell {
+    -fx-cell-size: 32px;
+}
+
+/* 标签页：标题区更清晰 */
+.tab-pane > .tab-header-area .tab {
+    -fx-padding: 6px 18px 6px 18px;
+}
+.tab-pane > .tab-header-area .tab-label {
+    -fx-font-size: 14px;
+}
+
+/* 输入框提示文字弱化（更精致的层级） */
+.text-input, .text-area {
+    -fx-prompt-text-fill: -of-text-prompt;
+}
+
+/* 对话框/面板留白（作用于所有 DialogPane） */
+.dialog-pane {
+    -fx-padding: 8px;
+}
+.dialog-pane .content {
+    -fx-padding: 10px;
+}
+
+/* 主按钮品牌渐变质感 */
+.button.primary {
+    -fx-background-color: linear-gradient(to bottom, -of-brand, -of-brand-hover);
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.25), 8, 0, 0, 2);
+}
+.button.primary:hover {
+    -fx-background-color: -of-brand-hover;
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.35), 12, 0, 0, 3);
+}
+
+/* 危险按钮柔和化 */
+.button.danger {
+    -fx-background-color: rgba(224, 122, 122, 0.14);
+    -fx-text-fill: -of-text-error;
+}
+.button.danger:hover {
+    -fx-background-color: -of-bg-danger-hover;
+}
+
+/* 空态/状态文字更透气 */
+.empty-title {
+    -fx-font-size: 20px;
+}
+.empty-icon {
+    -fx-font-size: 44px;
+}
+.status {
+    -fx-font-size: 12px;
+}
+
+/* ---- v5：企业闭环/知识库等新对话框补的通用 token ---- */
+.muted { -fx-text-fill: -fx-text-background-color; -fx-opacity: 0.62; }
+.nav-title { -fx-font-size: 15px; -fx-font-weight: bold; }
+.danger-text { -fx-text-fill: derive(-fx-text-background-color, 20%); -fx-opacity: 0.9; }

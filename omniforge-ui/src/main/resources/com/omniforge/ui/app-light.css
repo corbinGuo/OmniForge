@@ -1,0 +1,54 @@
+/* ============================================================
+   OmniForge 明亮主题（docs/UI_DESIGN.md v3）
+   仅覆盖 app.css 中 .root 的 -of-* 令牌 + 阴影/卡片效果，
+   结构、圆角、间距与暗色完全一致。品牌色 #2563EB 两主题共用。
+   ============================================================ */
+
+.root {
+    /* 品牌色与暗色一致（branding.yml themeColor 可覆盖） */
+    -of-brand: #2563eb;
+    -of-brand-hover: #1d4ed8;
+    -of-bg-root: #f3f5f9;
+    -of-bg-nav: #ffffff;
+    -of-bg-chat: #f3f5f9;
+    -of-bg-input: #ffffff;
+    -of-bg-menu: #ffffff;
+    -of-bg-button: #ffffff;
+    -of-bg-button-hover: #eef2f7;
+    -of-bg-bubble-assistant: #eef0f4;
+    -of-bubble-user: #2563eb;
+    -of-bg-card: #ffffff;
+    -of-bg-debate-column: #ffffff;
+    -of-bg-error: #fee2e2;
+    -of-bg-danger-hover: #fee2e2;
+    -of-bg-success: #d1fae5;
+    -of-bg-error-solid: #fee2e2;
+    -of-border: #e2e8f0;
+    -of-border-step: #c7d7f5;
+    -of-button-border: #d3dae4;
+    -of-input-border: #d3dae4;
+    -of-scroll-thumb: #cbd5e1;
+    -of-text: #1f2937;
+    -of-text-title: #111827;
+    -of-text-muted: #6b7280;
+    -of-text-prompt: #9aa3b2;
+    -of-text-thinking: #2563eb;
+    -of-text-step: #475569;
+    -of-text-error: #b91c1c;
+    -of-danger: #dc2626;
+    -of-step-error: #dc2626;
+    -of-success-border: #059669;
+    -of-error-border: #dc2626;
+    -of-check-mark: #ffffff;
+}
+
+/* 明亮主题：阴影减轻，以边框+层次代替深色投影 */
+.step-card,
+.config-card,
+.tray-menu {
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.08), 8, 0, 0, 2);
+}
+
+.toast {
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.25), 12, 0, 0, 4);
+}

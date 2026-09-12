@@ -1,0 +1,47 @@
+# ============================================================
+# OmniForge 模型网关配置（热重载：修改保存后自动生效，无需重启）
+# API Key 三种写法：
+#   1. ${ENV_VAR}     从环境变量读取（推荐）
+#   2. keystore:<id>  从加密存储读取（~/.omniforge/keys/<id>.key）
+#   3. 明文           仅限个人测试（日志会自动掩码）
+# ============================================================
+
+default-model: qwen-plus
+
+providers:
+  - name: dashscope
+    type: dashscope
+    api-key: ${DASHSCOPE_API_KEY}
+
+  - name: openai
+    type: openai-compatible
+    # 注意：不要带 /v1 后缀（Spring AI 会自动追加 /v1/chat/completions）
+    base-url: https://api.openai.com
+    api-key: ${OPENAI_API_KEY}
+
+  - name: deepseek
+    type: openai-compatible
+    base-url: https://api.deepseek.com
+    api-key: ${DEEPSEEK_API_KEY}
+
+models:
+  - alias: qwen-plus
+    provider: dashscope
+    model-id: qwen-plus
+    input-price-per-1m: 0.8
+    output-price-per-1m: 2.0
+    timeout-seconds: 120
+
+  - alias: gpt-4o-mini
+    provider: openai
+    model-id: gpt-4o-mini
+    input-price-per-1m: 0.15
+    output-price-per-1m: 0.6
+    timeout-seconds: 120
+
+  - alias: deepseek-chat
+    provider: deepseek
+    model-id: deepseek-chat
+    input-price-per-1m: 0.27
+    output-price-per-1m: 1.1
+    timeout-seconds: 120

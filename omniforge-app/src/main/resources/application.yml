@@ -1,0 +1,36 @@
+# OmniForge 应用装配默认配置（库模块不携带配置，装配级默认值集中在此）
+spring:
+  main:
+    web-application-type: none
+  jpa:
+    open-in-view: false
+  autoconfigure:
+    exclude:
+      # 不使用 spring.ai.dashscope.* 属性驱动的自动装配（模型经 models.yml 程序化构建）；
+      # 排除以避免未配置 API Key 时应用启动硬失败（韧性设计：0 模型也可启动）
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeChatAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAgentAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeImageAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeVideoAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioSpeechAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioTranscriptionAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeRerankAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeEmbeddingAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAsyncToolCallingManagerAutoConfiguration
+
+logging:
+  level:
+    root: info
+    com.omniforge: info
+    org.hibernate.SQL: warn
+
+# 上下文管理（ContextManager，需求 4.2）：装配级默认值，
+# 配置中心保存的 context.yml 经 ContextSettingsHolder 热生效后覆盖
+omniforge:
+  context:
+    enabled: true
+    max-input-tokens: 32000
+    keep-recent-turns: 5
+    strategy: sliding-window
+    capacity: 256
+    ttl-hours: 24

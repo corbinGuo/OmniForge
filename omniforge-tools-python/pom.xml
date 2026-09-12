@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omniforge</groupId>
+        <artifactId>omniforge-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omniforge-tools-python</artifactId>
+    <name>OmniForge Tools Python</name>
+    <description>Python 互操作引擎（JEP，zlib 许可）。经 Maven profile `python` 构建：mvn -P python verify。
+        JEP 原生库与平台绑定，运行另需本机安装 CPython</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JEP：Java Embedded Python（zlib 许可，允许闭源分发）。
+             坐标实为 black.ninia（ninja.sven 是官方新命名但未发布至 Central，2026-09 实证 404） -->
+        <dependency>
+            <groupId>black.ninia</groupId>
+            <artifactId>jep</artifactId>
+            <version>4.1.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

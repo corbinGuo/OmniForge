@@ -1,0 +1,40 @@
+#!/bin/sh
+# OmniForge deb 安装后脚本：注册 systemd 服务（omniforge --headless）
+set -e
+
+cat > /etc/systemd/system/omniforge.service <<'UNIT'
+[Unit]
+Description=OmniForge AI 工作台（Headless：消息网关 + Agent/辩论引擎）
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=omniforge
+Group=omniforge
+WorkingDirectory=/var/lib/omniforge
+ExecStart=/opt/omniforge/bin/omniforge --headless
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omniforge
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+if id omniforge >/dev/null 2>&1; then
+    :
+else
+    useradd --system --home /var/lib/omniforge --shell /usr/sbin/nologin omniforge || true
+    mkdir -p /var/lib/omniforge
+    chown -R omniforge:omniforge /var/lib/omniforge
+fi
+
+systemctl daemon-reload || true
+systemctl enable omniforge 2>/dev/null || true
+echo "OmniForge systemd 服务已注册：systemctl start omniforge 启动"
+exit 0

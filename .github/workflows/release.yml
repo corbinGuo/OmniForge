@@ -1,0 +1,130 @@
+name: Release
+
+# 推送 v* 标签触发三平台打包并发布 Release；workflow_dispatch 可手动试跑
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Package (${{ matrix.id }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, id: windows }
+          - { os: ubuntu-latest, id: linux }
+          - { os: macos-latest, id: macos }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build modules (skip tests)
+        run: mvn -B -ntp install -DskipTests
+
+      # ---------- Linux：deb（复用仓库脚本，含 systemd 服务注册） ----------
+      - name: Package (Linux deb)
+        if: matrix.id == 'linux'
+        run: |
+          sudo apt-get update -y || true
+          sudo apt-get install -y fakeroot || true
+          bash scripts/build-linux-package.sh
+
+      # ---------- macOS：dmg 优先（runner 无 GUI 时 hdiutil 常失败→降级 pkg），APP_IMAGE zip 兜底 ----------
+      - name: Package (macOS)
+        if: matrix.id == 'macos'
+        run: |
+          # -pl 子模块下 -DoutputDirectory 相对路径按模块目录解析（会嵌套错位），必须用绝对路径
+          LIB_DIR="$PWD/omniforge-app/target/lib"
+          mvn -B -ntp -pl omniforge-app dependency:copy-dependencies \
+              -DincludeScope=runtime -DoutputDirectory="$LIB_DIR" \
+              -DexcludeArtifactIds=commons-logging
+          # 主 jar 必须位于 --input 目录内并以相对名引用（jpackage 语义），
+          # 否则 cfg 记录构建机绝对路径，产物在用户机器上无法启动
+          cp omniforge-app/target/omniforge-app-*.jar "$LIB_DIR"/
+          MAIN_JAR=$(basename "$(ls "$LIB_DIR"/omniforge-app-*.jar | head -1)")
+          # macOS CFBundleVersion 要求首段 >= 1，0.1.0 会被拒 → mac 侧映射为 1.0.0（git 标签仍为 v0.1.0）
+          COMMON=(--name OmniForge --app-version 1.0.0 --vendor OmniForge
+                  --description "OmniForge Core community edition"
+                  --input "$LIB_DIR" --main-jar "$MAIN_JAR"
+                  --main-class com.omniforge.app.OmniForgeLauncher
+                  --java-options '-Djdk.httpclient.allowRestrictedHeaders=connection'
+                  --dest omniforge-app/target/package)
+          # 兜底：免安装镜像 zip（永远产出，保证 macOS 至少一个可用产物）
+          "$JAVA_HOME/bin/jpackage" --type app-image "${COMMON[@]}"
+          (cd omniforge-app/target/package && zip -qry OmniForge-macOS-appimage.zip OmniForge.app)
+          # 首选 dmg；runner 无 GUI 会话时 hdiutil 可能失败 → 降级 pkg 安装器
+          if ! "$JAVA_HOME/bin/jpackage" --type dmg "${COMMON[@]}"; then
+            echo "::warning::dmg 打包失败（CI hdiutil 已知问题），降级为 pkg 安装器"
+            "$JAVA_HOME/bin/jpackage" --type pkg "${COMMON[@]}"
+          fi
+
+      # ---------- Windows：EXE 安装包（runner 带 WiX 时）+ 免安装镜像 zip ----------
+      - name: Package (Windows)
+        if: matrix.id == 'windows'
+        shell: pwsh
+        run: |
+          $wixDir = Get-ChildItem "C:\Program Files (x86)" -Filter "WiX Toolset*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+          $exeFlag = ''
+          if ($wixDir) {
+            "$($wixDir.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+            $exeFlag = '-Domniforge.skip.exe=false'
+            Write-Host "WiX found: $($wixDir.FullName) — building EXE installer"
+          } else {
+            Write-Warning 'WiX not found on runner — building APP_IMAGE only'
+          }
+          mvn -B -ntp -P package $exeFlag -DskipTests -pl omniforge-app package
+          Compress-Archive -Path omniforge-app/target/package/omniforge `
+            -DestinationPath omniforge-app/target/package/omniforge-windows-appimage.zip -Force
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          find omniforge-app/target/package -maxdepth 1 \
+            \( -name '*.exe' -o -name '*.deb' -o -name '*.dmg' -o -name '*.pkg' -o -name '*.zip' \) \
+            -exec cp {} dist/ \;
+          ls -lh dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omniforge-${{ matrix.id }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+
+      - name: Attach installers to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            三平台安装包（Windows EXE / 免安装 zip、Linux deb、macOS dmg 或 pkg / 免安装 zip）。
+
+            - macOS 未签名：首次打开需右键 → 打开，或 `xattr -cr /Applications/OmniForge.app`；若本轮无 dmg 则使用 pkg 或免安装 zip（CI 无 GUI 时 dmg 打包受限）
+            - Linux deb 安装后自动注册 systemd 服务（`systemctl start omniforge`，Headless 模式）
+            - 各平台免安装 zip 解压即用，无需安装
+            - 产物内嵌完整 JRE（约 180MB），无需另装 Java
+          files: dist/*

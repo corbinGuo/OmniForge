@@ -1,0 +1,5 @@
+com.omniforge.gateway.ImGatewayAutoConfiguration
+com.omniforge.gateway.email.EmailAutoConfiguration
+com.omniforge.gateway.PlatformAdaptersAutoConfiguration
+com.omniforge.gateway.napcat.NapCatAutoConfiguration
+com.omniforge.gateway.qq.QqAutoConfiguration

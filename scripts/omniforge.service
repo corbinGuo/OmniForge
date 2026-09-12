@@ -1,0 +1,33 @@
+# OmniForge Headless 服务（systemd 模板，Phase 3 Step 5）
+# 部署步骤：
+#   1. 将可执行文件安装至 /usr/bin/omniforge（jpackage 产出的 deb 会自动完成）
+#   2. 创建运行用户：sudo useradd --system --home /var/lib/omniforge omniforge
+#   3. 安装本文件：sudo cp omniforge.service /etc/systemd/system/
+#   4. sudo systemctl daemon-reload && sudo systemctl enable --now omniforge
+# 健康检查：curl http://localhost:5119/health
+
+[Unit]
+Description=OmniForge AI 工作台（Headless：消息网关 + Agent/辩论引擎）
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=omniforge
+Group=omniforge
+# 工作目录（含配置与数据：models.yml、SQLite、向量库）
+WorkingDirectory=/var/lib/omniforge
+ExecStart=/usr/bin/omniforge --headless
+# 异常退出自动重启（指数退避由 systemd 内置）
+Restart=on-failure
+RestartSec=10
+# 日志走 journald（应用自身另写滚动文件日志）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omniforge
+# 安全加固（按需调整）
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

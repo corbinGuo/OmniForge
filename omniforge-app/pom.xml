@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omniforge</groupId>
+        <artifactId>omniforge-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omniforge-app</artifactId>
+    <name>OmniForge App</name>
+    <description>可执行装配（Apache 2.0）：Spring 上下文装配（全模块 autoconfiguration）、
+        GUI 启动入口、配置默认值。Headless 入口与 jpackage 打包在 Phase 3</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-ui</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-knowledge</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-gateway</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Spring Boot 应用装配（web=none） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot</artifactId>
+        </dependency>
+
+        <!-- 日志实现（Log4j2 → SLF4J，需求 Phase 1 #1） -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 运行：mvn javafx:run（Phase 1 P0 启动方式） -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.omniforge.app.OmniForgeLauncher</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <!-- 企业 API 客户端使用 Connection: close（防连接堆积）需放行受限头；
+                         必须在 fork JVM 启动早期注入（比类静态块更可靠） -->
+                    <systemPropertyVariables>
+                        <jdk.httpclient.allowRestrictedHeaders>connection</jdk.httpclient.allowRestrictedHeaders>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Phase 3 Step 7：Windows 打包（mvn -P package -pl omniforge-app）
+             jlink 最小运行时 + jpackage EXE 安装包 + APP_IMAGE 免安装镜像 -->
+        <profile>
+            <id>package</id>
+            <properties>
+                <!-- WiX 缺失时跳过 EXE 安装包（APP_IMAGE 不受影响） -->
+                <omniforge.skip.exe>true</omniforge.skip.exe>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- 主 jar 必须位于 input 目录内并以相对名引用（jpackage 语义）：
+                         否则 cfg 记录构建机绝对路径，产物在用户机器上无法启动 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>copy-main-jar-to-input</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.build.finalName}.jar</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.6.1</version>
+                        <executions>
+                            <execution>
+                                <id>copy-runtime-deps</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                                    <includeScope>runtime</includeScope>
+                                    <!-- commons-logging 与 jcl-over-slf4j 声明同一自动模块名，jlink 会拒绝 -->
+                                    <excludeArtifactIds>commons-logging</excludeArtifactIds>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.panteleyev</groupId>
+                        <artifactId>jpackage-maven-plugin</artifactId>
+                        <version>1.6.1</version>
+                        <dependencies>
+                            <!-- 插件已知坑：需显式提供 maven-shared-utils -->
+                            <dependency>
+                                <groupId>org.apache.maven.shared</groupId>
+                                <artifactId>maven-shared-utils</artifactId>
+                                <version>3.4.2</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <name>omniforge</name>
+                            <appVersion>0.1.0</appVersion>
+                            <vendor>OmniForge</vendor>
+                            <input>${project.build.directory}/lib</input>
+                            <mainJar>${project.build.finalName}.jar</mainJar>
+                            <mainClass>com.omniforge.app.OmniForgeLauncher</mainClass>
+                            <!-- 企业 API 客户端每请求 Connection: close（即用即关防连接堆积）需放行受限头 -->
+                            <javaOptions>
+                                <option>-Djdk.httpclient.allowRestrictedHeaders=connection</option>
+                            </javaOptions>
+                            <!-- 注：最小运行时（jlink）需 javafx-jmods 构件，当前镜像缺失；
+                                 不配置 runtimeImage 时 jpackage 使用完整 JDK 运行时（约 180MB）。
+                                 镜像补齐 org.openjfx:javafx-jmods:21.0.5:zip 后，
+                                 可经 jlink 输出至 target/jlink-runtime 并在下方启用 runtimeImage。 -->
+                            <!-- <runtimeImage>${project.build.directory}/jlink-runtime</runtimeImage> -->
+                            <destination>${project.build.directory}/package</destination>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>app-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                                <configuration>
+                                    <type>APP_IMAGE</type>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>exe-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                                <configuration>
+                                    <type>EXE</type>
+                                    <!-- EXE/MSI 安装包依赖 WiX 3.x（本机未装）；
+                                         安装 WiX 后：mvn -P package -Domniforge.skip.exe=false -pl omniforge-app jpackage:jpackage@exe-installer -->
+                                    <skip>${omniforge.skip.exe}</skip>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Windows MSI（需本机安装 WiX 3.x 且显式激活：mvn -P package-msi -pl omniforge-app jpackage:jpackage@msi-installer） -->
+        <profile>
+            <id>package-msi</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.panteleyev</groupId>
+                        <artifactId>jpackage-maven-plugin</artifactId>
+                        <version>1.6.1</version>
+                        <dependencies>
+                            <!-- 插件已知坑：需显式提供 maven-shared-utils -->
+                            <dependency>
+                                <groupId>org.apache.maven.shared</groupId>
+                                <artifactId>maven-shared-utils</artifactId>
+                                <version>3.4.2</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <name>omniforge</name>
+                            <appVersion>0.1.0</appVersion>
+                            <vendor>OmniForge</vendor>
+                            <input>${project.build.directory}/lib</input>
+                            <mainJar>${project.build.finalName}.jar</mainJar>
+                            <mainClass>com.omniforge.app.OmniForgeLauncher</mainClass>
+                            <destination>${project.build.directory}/package</destination>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>msi-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                                <configuration>
+                                    <type>MSI</type>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

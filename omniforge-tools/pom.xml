@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omniforge</groupId>
+        <artifactId>omniforge-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omniforge-tools</artifactId>
+    <name>OmniForge Tools</name>
+    <description>工具生态：内置工具（web_search/file_read_write/python_interpreter/shell_executor）、
+        安全护栏、ToolProvider 注册（Apache 2.0）。JEP 引擎实现在独立模块 omniforge-tools-python（-P python）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- MCP 工具注册进 ToolRegistry（core.agent）；方向 tools→core→common，无环 -->
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- MCP 客户端（需求 4.5 双轨制）：版本由 spring-ai-bom 管理，含 SDK 传输层（stdio/streamable HTTP）。
+             排除 starter-logging（Log4j2 统一日志栈，防止 logback 回流抢占 SLF4J 绑定） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-client</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- 自动装配与配置绑定（ToolsProperties） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 搜索 API JSON 解析 + tools.yml 持久化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omniforge</groupId>
+        <artifactId>omniforge-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omniforge-ui</artifactId>
+    <name>OmniForge UI</name>
+    <description>JavaFX 展示层（Apache 2.0）。Phase 1 P0：主窗口 + 对话输入 + 流式渲染；
+        知识库管理面板、暗黑模式、系统托盘推迟至 Phase 2</description>
+
+    <profiles>
+        <!-- 平台专属 JavaFX 原生构件分类器（javafx-controls:${javafx.platform}） -->
+        <profile>
+            <id>javafx-win</id>
+            <activation>
+                <os>
+                    <family>Windows</family>
+                </os>
+            </activation>
+            <properties>
+                <javafx.platform>win</javafx.platform>
+            </properties>
+        </profile>
+        <profile>
+            <id>javafx-linux</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <javafx.platform>linux</javafx.platform>
+            </properties>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 配置中心需要工具开关（ToolsSettingsHolder/Store） -->
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- 知识库管理面板（KnowledgeDialog → KnowledgeService） -->
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-knowledge</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- QQ 官方机器人配置（SettingsDialog 区段直读 QqSettingsStore；gateway 不依赖 ui，无环） -->
+        <dependency>
+            <groupId>com.omniforge</groupId>
+            <artifactId>omniforge-gateway</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JavaFX 21 LTS（GPL-2.0 + Classpath Exception，允许闭源分发，见 ARCHITECTURE 依赖清单） -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

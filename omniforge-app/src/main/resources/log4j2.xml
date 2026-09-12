@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OmniForge 日志配置（Log4j2）：控制台 + 滚动文件（<配置目录>/logs/omniforge.log）。
+     日志目录由启动器经系统属性 omniforge.log.dir 注入；GUI 与 Headless 共用。 -->
+<Configuration status="WARN">
+    <Properties>
+        <Property name="LOG_DIR">${sys:omniforge.log.dir:-logs}</Property>
+        <Property name="PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <!-- MCP server 模式（启动参数 mcp-server）把控制台设到 SYSTEM_ERR，stdout 只留 MCP 协议帧 -->
+        <Property name="CONSOLE_TARGET">${sys:omniforge.console.target:-SYSTEM_OUT}</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console" target="${CONSOLE_TARGET}">
+            <PatternLayout pattern="${PATTERN}"/>
+        </Console>
+        <RollingFile name="File" fileName="${LOG_DIR}/omniforge.log"
+                     filePattern="${LOG_DIR}/omniforge-%i.log.gz">
+            <PatternLayout pattern="${PATTERN}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Root>
+    </Loggers>
+</Configuration>
