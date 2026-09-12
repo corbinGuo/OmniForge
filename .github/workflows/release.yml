@@ -55,8 +55,8 @@ jobs:
           # 否则 cfg 记录构建机绝对路径，产物在用户机器上无法启动
           cp omniforge-app/target/omniforge-app-*.jar "$LIB_DIR"/
           MAIN_JAR=$(basename "$(ls "$LIB_DIR"/omniforge-app-*.jar | head -1)")
-          # macOS CFBundleVersion 要求首段 >= 1，0.1.0 会被拒 → mac 侧映射为 1.0.0（git 标签仍为 v0.1.0）
-          COMMON=(--name OmniForge --app-version 1.0.0 --vendor OmniForge
+          # macOS CFBundleVersion 要求首段 >= 1，0.x.y 会被拒 → mac 侧映射：v0.1.0→1.0.0、v0.1.1→1.0.1（git 标签为准）
+          COMMON=(--name OmniForge --app-version 1.0.1 --vendor OmniForge
                   --description "OmniForge Core community edition"
                   --input "$LIB_DIR" --main-jar "$MAIN_JAR"
                   --main-class com.omniforge.app.OmniForgeLauncher
