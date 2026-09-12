@@ -136,6 +136,7 @@ public final class SystemTraySupport {
                 menu = buildMenu(appStage);
                 menuStage = menu;
             }
+            refreshAutoStartItem();
             // 预布局取菜单实际尺寸（stage 未 show 前 getWidth 为 0，需按内容 pref 计算）
             Scene scene = menu.getScene();
             scene.getRoot().applyCss();
@@ -175,12 +176,25 @@ public final class SystemTraySupport {
         return Math.max(lo, Math.min(hi, value));
     }
 
+    /** 开机自启菜单项（B2）：缓存菜单只建一次，状态在每次弹出时经 {@link #refreshAutoStartItem()} 实时查询 */
+    private static Button autoStartItem;
+
     private static Stage buildMenu(Stage appStage) {
         Button showItem = new Button("显示主窗口");
         showItem.setMaxWidth(Double.MAX_VALUE);
         showItem.setOnAction(event -> {
             hideMenu();
             showWindow(appStage);
+        });
+        autoStartItem = new Button();
+        autoStartItem.setMaxWidth(Double.MAX_VALUE);
+        autoStartItem.setOnAction(event -> {
+            boolean target = !AutoStartSupport.isEnabled();
+            if (AutoStartSupport.setEnabled(target)) {
+                autoStartItem.setText(autoStartText(target));
+            } else {
+                autoStartItem.setText(autoStartText(AutoStartSupport.isEnabled()));
+            }
         });
         Button exitItem = new Button("退出");
         exitItem.setMaxWidth(Double.MAX_VALUE);
@@ -189,7 +203,7 @@ public final class SystemTraySupport {
             removeQuietly();
             Platform.exit();
         });
-        VBox box = new VBox(4, showItem, exitItem);
+        VBox box = new VBox(4, showItem, autoStartItem, exitItem);
         box.setPadding(new Insets(6));
         box.setAlignment(Pos.CENTER_LEFT);
         box.getStyleClass().add("tray-menu");
@@ -214,6 +228,24 @@ public final class SystemTraySupport {
         if (menuStage != null) {
             menuStage.hide();
         }
+    }
+
+    /** 每次菜单弹出时实时刷新「开机自启」项（注册表/desktop 文件即状态源，Q3-A） */
+    private static void refreshAutoStartItem() {
+        if (autoStartItem == null) {
+            return;
+        }
+        if (!AutoStartSupport.supported()) {
+            autoStartItem.setText("开机自启（需安装版）");
+            autoStartItem.setDisable(true);
+            return;
+        }
+        autoStartItem.setDisable(false);
+        autoStartItem.setText(autoStartText(AutoStartSupport.isEnabled()));
+    }
+
+    private static String autoStartText(boolean enabled) {
+        return enabled ? "开机自启：开" : "开机自启：关";
     }
 
     private static void removeQuietly() {

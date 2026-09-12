@@ -696,6 +696,8 @@ public class OmniForgeApplication extends Application {
                 com.omniforge.ui.tray.SystemTraySupport.hideToTray(stage);
             });
         }
+        // 开机自启路径自愈（B2 Q4-A）：安装版升级/换目录后静默改写自启项指向
+        com.omniforge.ui.tray.AutoStartSupport.healIfNeeded();
 
         // Phase 4 安全底线：首次启动强制签署 EULA，拒绝即退出
         if (eulaService != null && !eulaService.isAccepted()) {
