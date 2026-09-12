@@ -28,8 +28,8 @@ public final class AutoStartSupport {
 
     private static final Logger log = LoggerFactory.getLogger(AutoStartSupport.class);
 
-    /** Windows HKCU Run 键 */
-    static final String WIN_RUN_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    /** Windows HKCU Run 键（必须带根键前缀：reg.exe 不接受无根键的相对键名） */
+    static final String WIN_RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
     /** 注册表值名 / 应用名 */
     static final String APP_NAME = "OmniForge";
     /** Linux XDG autostart 文件 */
