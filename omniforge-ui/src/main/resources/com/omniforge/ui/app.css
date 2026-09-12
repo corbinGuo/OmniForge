@@ -327,6 +327,21 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 12, 0, 0, 4);
 }
 
+/* B1（U3）：协作暂停检查点——⏸ 提示 + 常显续跑按钮 */
+.collab-checkpoint {
+    -fx-background-color: -of-bg-card;
+    -fx-background-radius: 10;
+    -fx-border-color: -of-border;
+    -fx-border-radius: 10;
+    -fx-padding: 10 14 10 14;
+    -fx-max-width: 640;
+}
+
+.collab-checkpoint .label {
+    -fx-text-fill: -of-text;
+    -fx-font-size: 12px;
+}
+
 .step-card .label {
     -fx-text-fill: -of-text-step;
     -fx-font-size: 12px;

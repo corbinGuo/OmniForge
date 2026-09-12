@@ -122,6 +122,8 @@ public class OmniForgeApplication extends Application {
     private final Button collabArchiveButton = new Button("🗂 档案");
     /** 「📄 草稿」（D5 文档产出 Q2：collabLine 末尾，与档案并列；写角色可用） */
     private final Button collabDraftButton = new Button("📄 草稿");
+    /** B1（U3）：协作条「自动执行」开关——关=②后暂停待用户续跑 */
+    private final ToggleSwitch autoExecToggle = new ToggleSwitch("自动执行");
     /** viewer 兜底导出入口（Q7：viewer 只读可见可用；写角色用 collabLine 内按钮） */
     private final Button inputDraftButton = new Button("📄 草稿");
     private boolean collabComposerOn;
@@ -504,11 +506,17 @@ public class OmniForgeApplication extends Application {
         inputDraftButton.setOnAction(e -> documentDraft());
         javafx.scene.layout.FlowPane collabLine = new javafx.scene.layout.FlowPane(8, 4);
         collabLine.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        // B1（U3）：自动执行开关——关（默认）= 讨论+结论后暂停，执行+验收需点击续跑（闸在费用大头）
+        autoExecToggle.setSelected(false);
+        javafx.scene.control.Tooltip.install(autoExecToggle, new javafx.scene.control.Tooltip(
+                "开：讨论→结论→执行→验收自动跑完（执行阶段调用工具产生费用）；\n"
+                        + "关（默认）：讨论与结论完成后暂停，由你决定是否「⚙ 执行并验收」。"));
         collabLine.getChildren().addAll(
                 new Label("模板"), collabTemplate,
                 new Label("参与模型"), collabModelsPicker,
                 new Label("裁判"), collabJudge,
                 new Label("轮次"), collabRounds,
+                autoExecToggle,
                 collabArchiveButton,
                 collabDraftButton);
         collabLine.setRowValignment(javafx.geometry.VPos.CENTER);
@@ -1403,7 +1411,7 @@ public class OmniForgeApplication extends Application {
         }
     }
 
-    /** 对话内协作：讨论→结论→执行→验收 全程逐条以系统消息回到当前会话 */
+    /** 对话内协作：①讨论→②结论（自动）→【自动执行开：③执行→④验收 | 关：暂停待续跑】逐条以系统消息回到当前会话 */
     private void startEnterpriseCollab(String text) {
         setSending(true);
         appendBubble("user", text);
@@ -1421,26 +1429,28 @@ public class OmniForgeApplication extends Application {
         final String mode = (String) preset.get("mode");
         final String systemText = (String) preset.get("systemText");
         final List<String> aliases = List.copyOf(selected);
+        // B1 Q5-A：发送时捕获开关与会话（运行中切换不影响本轮；Q4-A 守卫依据）
+        final boolean autoExec = autoExecToggle.isSelected();
+        final String sessionIdAtSend = enterpriseSessionId;
         appendSystem("🧠 已提交「" + template + "」：" + oneLine(text, 60)
-                + "（参与 " + String.join(" + ", aliases) + "，讨论约 20-60 秒）");
+                + "（参与 " + String.join(" + ", aliases)
+                + (autoExec ? "，自动执行" : "，执行前需确认") + "）");
         Thread.ofVirtual().start(() -> {
             try {
                 // D5 Q1/Q6：传当前会话（新会话直接开协作时 enterpriseSessionId 为空 → 不关联）
                 var run = enterpriseBridge.collabCreate(text, aliases,
-                        judgeAlias, mode, rounds, 0.5, systemText, enterpriseSessionId);
+                        judgeAlias, mode, rounds, 0.5, systemText, sessionIdAtSend);
                 appendCollabSystem("① 讨论完成（" + statusText(run.status()) + "）", transcriptHead(run.id()));
                 var concluded = enterpriseBridge.collabConclude(run.id());
                 appendCollabSystem("② 结论", concluded.conclusion());
-                var executed = enterpriseBridge.collabExecute(run.id(), null, aliases.get(0));
-                appendCollabSystem("③ 执行完成", truncateLines(executed.executionOutput(), 500));
-                var reviewed = enterpriseBridge.collabReview(run.id(), judgeAlias);
-                boolean pass = "done".equals(reviewed.status());
-                appendCollabSystem("④ 验收：" + (pass ? "✅ 通过" : "⚠ 未通过（可在档案中重试）"),
-                        reviewed.reviewReason());
-                Platform.runLater(() -> {
-                    setSending(false);
-                    appendSystem("✅ 本轮协作已完成，结论与结果已在上方；点「🗂 档案」可查看完整讨论/回看。");
-                });
+                if (!autoExec) {
+                    Platform.runLater(() -> {
+                        setSending(false);
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliases, sessionIdAtSend);
+                    });
+                    return;
+                }
+                finishCollab(run.id(), judgeAlias, aliases);
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     setSending(false);
@@ -1448,6 +1458,65 @@ public class OmniForgeApplication extends Application {
                 });
             }
         });
+    }
+
+    /**
+     * ③执行 → ④验收 共用段（B1）：自动全链与手动「⚙ 执行并验收」两路径共用；
+     * 调用方负责 setSending(true)；完成/失败在此恢复发送态。
+     */
+    private void finishCollab(String runId, String judgeAlias, List<String> aliases) {
+        try {
+            var executed = enterpriseBridge.collabExecute(runId, null, aliases.get(0));
+            appendCollabSystem("③ 执行完成", truncateLines(executed.executionOutput(), 500));
+            var reviewed = enterpriseBridge.collabReview(runId, judgeAlias);
+            boolean pass = "done".equals(reviewed.status());
+            appendCollabSystem("④ 验收：" + (pass ? "✅ 通过" : "⚠ 未通过（可在档案中重试）"),
+                    reviewed.reviewReason());
+            Platform.runLater(() -> {
+                setSending(false);
+                appendSystem("✅ 本轮协作已完成，结论与结果已在上方；点「🗂 档案」可查看完整讨论/回看。");
+            });
+        } catch (Exception e) {
+            Platform.runLater(() -> {
+                setSending(false);
+                appendSystem("协作失败（已中止）：" + e.getMessage());
+            });
+        }
+    }
+
+    /**
+     * 暂停检查点（B1 Q3-A）：⏸ 系统气泡 + 常显按钮「⚙ 执行并验收」/「▣ 就此打住」。
+     * 点击续跑经会话守卫（Q4-A）：跨会话仅提示不执行（③④ 会写进当前会话视图，避免误导）。
+     */
+    private void appendCollabCheckpoint(String runId, String judgeAlias, List<String> aliases,
+                                        String sessionIdAtSend) {
+        hideEmptyState();
+        Label label = new Label("⏸ 协作已暂停：讨论与结论已就绪。执行阶段将调用工具（产生费用），确认后继续。");
+        label.setWrapText(true);
+        label.getStyleClass().add("status");
+        Button proceed = new Button("⚙ 执行并验收");
+        proceed.getStyleClass().add("primary");
+        Button stop = new Button("▣ 就此打住");
+        HBox buttons = new HBox(8, proceed, stop);
+        buttons.setAlignment(Pos.CENTER_LEFT);
+        VBox checkpoint = new VBox(8, label, buttons);
+        checkpoint.getStyleClass().add("collab-checkpoint");
+        checkpoint.setPadding(new Insets(10));
+        proceed.setOnAction(event -> {
+            if (!java.util.Objects.equals(enterpriseSessionId, sessionIdAtSend)) {
+                appendSystem("该协作属于其他会话，请切回原会话后继续，或在 🗂 档案中操作。");
+                return;
+            }
+            chatBox.getChildren().remove(checkpoint);
+            setSending(true);
+            Thread.ofVirtual().start(() -> finishCollab(runId, judgeAlias, aliases));
+        });
+        stop.setOnAction(event -> {
+            chatBox.getChildren().remove(checkpoint);
+            appendSystem("已打住：该协作停在「结论」状态，后续可在 🗂 档案中继续执行/重试。");
+        });
+        chatBox.getChildren().add(checkpoint);
+        requestScrollBottom();
     }
 
     /** D5 文档产出（Q2/Q5）：拉取本会话消息 + 该会话协作 → 合成 Markdown → 弹预览小窗 */
