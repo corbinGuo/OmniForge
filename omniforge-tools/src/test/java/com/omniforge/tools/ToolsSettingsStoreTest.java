@@ -65,4 +65,19 @@ class ToolsSettingsStoreTest {
         assertFalse(loaded.pythonEnabled());
         assertEquals(List.of("D:\\legacy"), loaded.workspaceRoots(), "旧标量应迁移为单元素列表");
     }
+
+    @Test
+    void 旧文件无确认开关字段时安全默认开启() throws Exception {
+        // U11：存量 tools.yml 无 confirmationRequired 键 → 缺省 true（安全默认）
+        Files.writeString(file(), "shellEnabled: true\npythonEnabled: true\n");
+        ToolsSettings loaded = store.load(file());
+        assertTrue(loaded.confirmationRequired(), "缺省应保持人工确认开启");
+    }
+
+    @Test
+    void 确认开关关闭往返保留() throws Exception {
+        ToolsSettings settings = new ToolsSettings(false, true, List.of(), false);
+        store.save(file(), settings);
+        assertFalse(store.load(file()).confirmationRequired(), "显式关闭应往返保留");
+    }
 }

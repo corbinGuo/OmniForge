@@ -43,6 +43,8 @@ public class ToolsSettingsStore {
         }
         boolean shell = root.path("shellEnabled").asBoolean(defaults.shellEnabled());
         boolean python = root.path("pythonEnabled").asBoolean(defaults.pythonEnabled());
+        // U11：旧 tools.yml 无此键 → 安全默认开启（缺省即 true）
+        boolean confirmation = root.path("confirmationRequired").asBoolean(defaults.confirmationRequired());
         List<String> roots = new ArrayList<>();
         JsonNode plural = root.path("workspaceRoots");
         if (plural.isArray()) {
@@ -59,7 +61,7 @@ public class ToolsSettingsStore {
                 roots.add(legacy.asText()); // 旧 392da58 单值迁移
             }
         }
-        return new ToolsSettings(shell, python, roots);
+        return new ToolsSettings(shell, python, roots, confirmation);
     }
 
     /** 保存工具开关（自动创建父目录；record 紧凑构造保证列表已 strip/滤空/去重） */

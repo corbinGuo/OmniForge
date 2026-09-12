@@ -131,6 +131,8 @@ final class SettingsDialog {
     private Stage dialogStage;
     private final CheckBox shellToggle = new CheckBox("shell_executor（危险操作，默认关闭）");
     private final CheckBox pythonToggle = new CheckBox("python_interpreter");
+    /** U11：危险操作人工确认开关（关 = 不弹确认框直接执行，用户自担风险） */
+    private final CheckBox confirmationToggle = new CheckBox("危险操作人工确认（HITL）");
     // 文件沙箱根目录（2026-09：支持多个授权目录；空列表 = 仅默认工作区）
     private final VBox workspaceRootsBox = new VBox(6);
     private final List<WorkspaceRootRow> workspaceRootRows = new ArrayList<>();
@@ -231,6 +233,7 @@ final class SettingsDialog {
                 : new ToolsSettingsStore().load(toolsFile);
         shellToggle.setSelected(toolSettings.shellEnabled());
         pythonToggle.setSelected(toolSettings.pythonEnabled());
+        confirmationToggle.setSelected(toolSettings.confirmationRequired());
         // 文件沙箱根目录（2026-09：支持多个授权目录；空列表 = 仅默认工作区）
         Path defaultWorkspace = toolsProperties != null ? toolsProperties.getWorkspaceRoot()
                 : toolsFile.toAbsolutePath().getParent().resolve("workspace");
@@ -878,9 +881,23 @@ final class SettingsDialog {
         addRootRow.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(defaultWorkspaceHint, Priority.ALWAYS);
 
+        // U11：危险操作人工确认开关（写文件/Shell 等需确认工具的 HITL 总闸）
+        confirmationToggle.setTooltip(new javafx.scene.control.Tooltip(
+                "开启（默认）：Agent 调用写文件/删除/Shell 等危险操作前弹窗确认；\n"
+                        + "关闭：不经确认直接执行（风险自担）。仅影响桌面版，Headless/IM 无弹窗通道。"));
+        Label confirmationDesc = new Label(
+                "开启后危险操作执行前弹窗（60 秒未响应视为拒绝）；关闭则直接执行，仅建议可信环境关闭。");
+        confirmationDesc.getStyleClass().add("status");
+        confirmationDesc.setWrapText(true);
+        HBox confirmationRow = new HBox(16, confirmationToggle);
+        confirmationRow.setAlignment(Pos.CENTER_LEFT);
+
         VBox content = new VBox(12,
                 new Label("修改后保存立即生效（无需重启）"),
                 toolsRow,
+                sectionTitle("危险操作人工确认"),
+                confirmationRow,
+                confirmationDesc,
                 sectionTitle("文件沙箱根目录（可多个）"),
                 sandboxDesc,
                 workspaceRootsBox,
@@ -1146,10 +1163,11 @@ final class SettingsDialog {
         };
     }
 
-    /** 工具模块：tools.yml + ToolsSettingsHolder 热生效（含多沙箱根目录） */
+    /** 工具模块：tools.yml + ToolsSettingsHolder 热生效（含多沙箱根目录与确认开关） */
     private IoAction snapshotTools() {
         ToolsSettings toolSettings = new ToolsSettings(
-                shellToggle.isSelected(), pythonToggle.isSelected(), collectWorkspaceRoots());
+                shellToggle.isSelected(), pythonToggle.isSelected(), collectWorkspaceRoots(),
+                confirmationToggle.isSelected());
         return () -> {
             new ToolsSettingsStore().save(toolsFile, toolSettings);
             if (settingsHolder != null) {
