@@ -74,4 +74,22 @@ class CollabMentionParserTest {
         assertThat(r.isCollab()).isTrue();
         assertThat(r.aliases()).hasSize(2);
     }
+
+    @Test
+    void 光标片段检测触发自动补全() {
+        assertThat(CollabMentionParser.mentionFragment("你好 @deep")).isEqualTo("deep");
+        assertThat(CollabMentionParser.mentionFragment("你好 @")).isEqualTo("");
+        assertThat(CollabMentionParser.mentionFragment("你好 @deep 已发")).isNull();
+        assertThat(CollabMentionParser.mentionFragment("普通文本")).isNull();
+        assertThat(CollabMentionParser.mentionFragment(null)).isNull();
+    }
+
+    @Test
+    void 候选过滤大小写不敏感包含匹配() {
+        var all = CollabMentionParser.suggestModels("", MODELS);
+        assertThat(all).hasSize(3);
+        var hit = CollabMentionParser.suggestModels("DEEP", MODELS);
+        assertThat(hit).containsExactly("deepseek-chat");
+        assertThat(CollabMentionParser.suggestModels("zzz", MODELS)).isEmpty();
+    }
 }

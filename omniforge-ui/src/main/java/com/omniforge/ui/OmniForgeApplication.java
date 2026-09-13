@@ -148,6 +148,9 @@ public class OmniForgeApplication extends Application {
     private String currentChatSessionId;
 
     private TextArea inputArea;
+    /** D7：@ 提及自动补全弹层（企业模式；输入 @ 弹出模型候选，点击插入） */
+    private javafx.stage.Popup mentionPopup;
+    private javafx.scene.layout.VBox mentionListBox;
     private ComboBox<ModelChoice> modelCombo;
     private ToggleSwitch agentMode;
     private ToggleSwitch debateMode;
@@ -305,6 +308,7 @@ public class OmniForgeApplication extends Application {
         modelPickerButton.setOnAction(event -> openModelPicker());
 
         inputArea = new TextArea();
+        setupMentionAutocomplete();
         inputArea.setPromptText("输入消息，Enter 发送，Shift+Enter 换行");
         inputArea.setPrefRowCount(1);
         inputArea.setMaxHeight(64);
@@ -1360,6 +1364,93 @@ public class OmniForgeApplication extends Application {
         }
         collabModelsPopup.show(collabModelsPicker,
                 bounds.getMinX(), bounds.getMaxY() + 2);
+    }
+
+    // ---------- D7 方向 A：@ 提及自动补全 ----------
+
+    /** 输入 @ 时弹出可用模型候选（企业模式）；点击插入「@别名 」，免手输精确别名 */
+    private void setupMentionAutocomplete() {
+        inputArea.textProperty().addListener((obs, old, now) -> updateMentionPopup());
+        inputArea.caretPositionProperty().addListener((obs, old, now) -> updateMentionPopup());
+        inputArea.focusedProperty().addListener((obs, was, focused) -> {
+            if (!focused) {
+                hideMentionPopup();
+            }
+        });
+        inputArea.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE
+                    && mentionPopup != null && mentionPopup.isShowing()) {
+                mentionPopup.hide();
+                event.consume();
+            }
+        });
+    }
+
+    private void updateMentionPopup() {
+        if (enterpriseBridge == null || collabModelChecks.isEmpty()
+                || inputArea.getScene() == null) {
+            hideMentionPopup();
+            return;
+        }
+        String text = inputArea.getText();
+        int caret = inputArea.getCaretPosition();
+        if (caret < 0 || caret > text.length()) {
+            hideMentionPopup();
+            return;
+        }
+        String frag = com.omniforge.ui.collab.CollabMentionParser.mentionFragment(
+                text.substring(0, caret));
+        if (frag == null) {
+            hideMentionPopup();
+            return;
+        }
+        var hits = com.omniforge.ui.collab.CollabMentionParser.suggestModels(
+                frag, List.copyOf(collabModelChecks.keySet()));
+        if (hits.isEmpty()) {
+            hideMentionPopup();
+            return;
+        }
+        showMentionPopup(hits, frag, caret);
+    }
+
+    private void showMentionPopup(List<String> hits, String fragment, int caret) {
+        if (mentionPopup == null) {
+            mentionListBox = new javafx.scene.layout.VBox(2);
+            mentionListBox.getStyleClass().add("tray-menu");
+            mentionListBox.setPadding(new javafx.geometry.Insets(4));
+            mentionPopup = new javafx.stage.Popup();
+            mentionPopup.setAutoFix(true);
+            mentionPopup.setAutoHide(true);
+            mentionPopup.getContent().add(mentionListBox);
+            com.omniforge.ui.theme.ThemeManager.attach(mentionPopup.getScene());
+        }
+        mentionListBox.getChildren().clear();
+        for (String alias : hits) {
+            Button item = new Button("@" + alias);
+            item.setMaxWidth(Double.MAX_VALUE);
+            item.setOnAction(event -> {
+                String text = inputArea.getText();
+                int start = Math.max(0, caret - fragment.length() - 1);
+                String replacement = "@" + alias + " ";
+                inputArea.setText(text.substring(0, start) + replacement
+                        + text.substring(Math.min(caret, text.length())));
+                inputArea.positionCaret(start + replacement.length());
+                hideMentionPopup();
+            });
+            mentionListBox.getChildren().add(item);
+        }
+        var bounds = inputArea.localToScreen(inputArea.getBoundsInLocal());
+        if (bounds == null) {
+            return;
+        }
+        double h = Math.min(hits.size() * 34 + 10, 240);
+        mentionPopup.show(inputArea, bounds.getMinX(), bounds.getMinY() - h - 6);
+    }
+
+    private void hideMentionPopup() {
+        if (mentionPopup != null && mentionPopup.isShowing()) {
+            mentionPopup.hide();
+        }
     }
 
     /** 参与模型已选摘要：刷新触发器按钮文本（已选 N/M）与 tooltip 明细 */

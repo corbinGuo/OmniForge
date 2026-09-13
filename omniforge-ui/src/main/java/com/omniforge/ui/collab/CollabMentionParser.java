@@ -109,4 +109,26 @@ public final class CollabMentionParser {
     private static String resolveModel(List<String> models, String name) {
         return models.stream().filter(m -> m.equalsIgnoreCase(name)).findFirst().orElse(name);
     }
+
+    /**
+     * 光标前文本中的活跃 @ 片段（{@code @[^空格]*$}）——自动补全触发依据；无则返回 null。
+     *
+     * @param textBeforeCaret 光标之前的输入文本（不含光标后内容）
+     * @return 片段（不含 @，可为空串 = 刚输入 @）；不在 @ 提及上下文中返回 null
+     */
+    public static String mentionFragment(String textBeforeCaret) {
+        if (textBeforeCaret == null) {
+            return null;
+        }
+        var matcher = java.util.regex.Pattern.compile("@([^\\s]*)$").matcher(textBeforeCaret);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    /** 候选过滤：片段为空 = 全部模型；否则大小写不敏感包含匹配 */
+    public static List<String> suggestModels(String fragment, List<String> models) {
+        String f = fragment == null ? "" : fragment.toLowerCase(Locale.ROOT);
+        return models.stream()
+                .filter(m -> f.isBlank() || m.toLowerCase(Locale.ROOT).contains(f))
+                .toList();
+    }
 }
