@@ -1441,12 +1441,24 @@ public class OmniForgeApplication extends Application {
                 var run = enterpriseBridge.collabCreate(topic, aliasList,
                         judgeAlias, mode, rounds, 0.5, systemText, sessionIdAtSend);
                 renderDiscussion(run.id(), aliasList, template);
-                var concluded = enterpriseBridge.collabConclude(run.id());
-                appendCollabSystem("② 结论", concluded.conclusion());
+                String conclusionText;
+                try {
+                    var concluded = enterpriseBridge.collabConclude(run.id());
+                    conclusionText = concluded.conclusion();
+                } catch (Exception concludeFailure) {
+                    // D7 反馈：结论模型超时/异常（服务端已标 REVISED 可重试）→ 给出重试检查点而非整体失败
+                    Platform.runLater(() -> {
+                        setSending(false);
+                        appendSystem("⚠ 结论生成失败（模型超时/异常）：" + concludeFailure.getMessage());
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend, true);
+                    });
+                    return;
+                }
+                appendCollabSystem("② 结论", conclusionText);
                 if (!autoExec) {
                     Platform.runLater(() -> {
                         setSending(false);
-                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend);
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend, false);
                     });
                     return;
                 }
@@ -1522,13 +1534,16 @@ public class OmniForgeApplication extends Application {
     }
 
     /**
-     * 暂停检查点（B1 Q3-A）：⏸ 系统气泡 + 常显按钮「⚙ 执行并验收」/「▣ 就此打住」。
-     * 点击续跑经会话守卫（Q4-A）：跨会话仅提示不执行（③④ 会写进当前会话视图，避免误导）。
+     * 暂停检查点（B1 Q3-A + D7 反馈增强）：⏸ 气泡 + 常显按钮。
+     * retryConclusion=true（结论生成失败时）：额外提供「♻ 重试结论」，成功后回到普通暂停态。
+     * 点击续跑经会话守卫（Q4-A）：跨会话仅提示不执行。
      */
     private void appendCollabCheckpoint(String runId, String judgeAlias, List<String> aliases,
-                                        String sessionIdAtSend) {
+                                        String sessionIdAtSend, boolean retryConclusion) {
         hideEmptyState();
-        Label label = new Label("⏸ 协作已暂停：讨论与结论已就绪。执行阶段将调用工具（产生费用），确认后继续。");
+        Label label = new Label(retryConclusion
+                ? "⏸ 结论生成失败（模型超时/异常）：可重试结论，或就此打住稍后在 🗂 档案处理。"
+                : "⏸ 协作已暂停：讨论与结论已就绪。执行阶段将调用工具（产生费用），确认后继续。");
         label.setWrapText(true);
         label.getStyleClass().add("status");
         Button proceed = new Button("⚙ 执行并验收");
@@ -1539,6 +1554,34 @@ public class OmniForgeApplication extends Application {
         VBox checkpoint = new VBox(8, label, buttons);
         checkpoint.getStyleClass().add("collab-checkpoint");
         checkpoint.setPadding(new Insets(10));
+        if (retryConclusion) {
+            Button retry = new Button("♻ 重试结论");
+            buttons.getChildren().add(0, retry);
+            retry.setOnAction(event -> {
+                if (!java.util.Objects.equals(enterpriseSessionId, sessionIdAtSend)) {
+                    appendSystem("该协作属于其他会话，请切回原会话后操作。");
+                    return;
+                }
+                chatBox.getChildren().remove(checkpoint);
+                setSending(true);
+                Thread.ofVirtual().start(() -> {
+                    try {
+                        var run = enterpriseBridge.collabConclude(runId);
+                        Platform.runLater(() -> {
+                            setSending(false);
+                            appendCollabSystem("② 结论", run.conclusion());
+                            appendCollabCheckpoint(runId, judgeAlias, aliases, sessionIdAtSend, false);
+                        });
+                    } catch (Exception e) {
+                        Platform.runLater(() -> {
+                            setSending(false);
+                            appendSystem("⚠ 结论重试仍失败：" + e.getMessage());
+                            appendCollabCheckpoint(runId, judgeAlias, aliases, sessionIdAtSend, true);
+                        });
+                    }
+                });
+            });
+        }
         proceed.setOnAction(event -> {
             if (!java.util.Objects.equals(enterpriseSessionId, sessionIdAtSend)) {
                 appendSystem("该协作属于其他会话，请切回原会话后继续，或在 🗂 档案中操作。");
