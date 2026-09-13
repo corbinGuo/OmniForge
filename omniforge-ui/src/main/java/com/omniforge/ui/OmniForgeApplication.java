@@ -1411,46 +1411,46 @@ public class OmniForgeApplication extends Application {
         }
     }
 
-    /** 对话内协作：①讨论→②结论（自动）→【自动执行开：③执行→④验收 | 关：暂停待续跑】逐条以系统消息回到当前会话 */
-    private void startEnterpriseCollab(String text) {
+    /**
+     * 对话内协作（D7 参数化）：①讨论（全轮次平铺）→②结论→【自动执行开：③执行→④验收 | 关：暂停待续跑】。
+     *
+     * @param displayText 用户原始输入（含 @提及，进用户气泡）；topic 清洗后主题（进协作 run）
+     */
+    private void startEnterpriseCollab(String displayText, String topic, List<String> aliases,
+                                       String template, int rounds, boolean autoExec,
+                                       String judgeAlias) {
         setSending(true);
-        appendBubble("user", text);
-        String template = collabTemplate.getValue() == null ? "圆桌讨论" : collabTemplate.getValue();
-        List<String> selected = new ArrayList<>(selectedCollabModels());
-        if (selected.size() < 2) {
-            appendSystem("请至少勾选 2 个参与模型后再发起。");
+        appendBubble("user", displayText);
+        if (aliases == null || aliases.size() < 2) {
+            appendSystem("请至少选择 2 个参与模型后再发起。");
             finishSend();
             return;
         }
-        String judge = collabJudge.getValue();
-        final String judgeAlias = judge == null || judge.startsWith("（") ? null : judge;
-        final int rounds = parseCollabRounds();
         java.util.Map<String, Object> preset = collabPreset(template);
         final String mode = (String) preset.get("mode");
         final String systemText = (String) preset.get("systemText");
-        final List<String> aliases = List.copyOf(selected);
+        final List<String> aliasList = List.copyOf(aliases);
         // B1 Q5-A：发送时捕获开关与会话（运行中切换不影响本轮；Q4-A 守卫依据）
-        final boolean autoExec = autoExecToggle.isSelected();
         final String sessionIdAtSend = enterpriseSessionId;
-        appendSystem("🧠 已提交「" + template + "」：" + oneLine(text, 60)
-                + "（参与 " + String.join(" + ", aliases)
+        appendSystem("🧠 已提交「" + template + "」：" + oneLine(topic, 60)
+                + "（参与 " + String.join(" + ", aliasList) + " · " + rounds + " 轮"
                 + (autoExec ? "，自动执行" : "，执行前需确认") + "）");
         Thread.ofVirtual().start(() -> {
             try {
                 // D5 Q1/Q6：传当前会话（新会话直接开协作时 enterpriseSessionId 为空 → 不关联）
-                var run = enterpriseBridge.collabCreate(text, aliases,
+                var run = enterpriseBridge.collabCreate(topic, aliasList,
                         judgeAlias, mode, rounds, 0.5, systemText, sessionIdAtSend);
-                appendCollabSystem("① 讨论完成（" + statusText(run.status()) + "）", transcriptHead(run.id()));
+                renderDiscussion(run.id(), aliasList, template);
                 var concluded = enterpriseBridge.collabConclude(run.id());
                 appendCollabSystem("② 结论", concluded.conclusion());
                 if (!autoExec) {
                     Platform.runLater(() -> {
                         setSending(false);
-                        appendCollabCheckpoint(run.id(), judgeAlias, aliases, sessionIdAtSend);
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend);
                     });
                     return;
                 }
-                finishCollab(run.id(), judgeAlias, aliases);
+                finishCollab(run.id(), judgeAlias, aliasList);
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     setSending(false);
@@ -1461,13 +1461,50 @@ public class OmniForgeApplication extends Application {
     }
 
     /**
+     * D7 方向 B：讨论记录全内联（Q3-A + Q6-B）。结构化 JSON → 每轮「━━ 第 N 轮 ━━」分隔 +
+     * 每模型色点气泡全文；旧 run 回退 ◆ 段单层；再回退单全文气泡。不再 200 字摘要。
+     */
+    private void renderDiscussion(String runId, List<String> aliases, String template) {
+        String data;
+        String legacy;
+        try {
+            data = enterpriseBridge.collabTranscriptData(runId);
+        } catch (Exception e) {
+            data = null;
+        }
+        try {
+            legacy = enterpriseBridge.collabTranscript(runId);
+        } catch (Exception e) {
+            legacy = null;
+        }
+        var result = com.omniforge.ui.collab.CollabTranscriptParser.parse(data, legacy);
+        String finalCaption = result.caption() == null ? "" : result.caption();
+        appendSystem("━━ ① 多模型讨论（" + template + " · " + aliases.size() + " 模型"
+                + (finalCaption.isBlank() ? "" : " · " + finalCaption) + "）━━");
+        if (result.singleFallback() != null) {
+            appendSystem(result.singleFallback());
+            return;
+        }
+        boolean multiRound = result.blocks().size() > 1;
+        for (var block : result.blocks()) {
+            if (multiRound && block.round() > 0) {
+                appendSystem("━━ 第 " + block.round() + " 轮 ━━");
+            }
+            for (var statement : block.statements()) {
+                appendDebateBubble(statement.alias(), statement.text());
+            }
+        }
+    }
+
+    /**
      * ③执行 → ④验收 共用段（B1）：自动全链与手动「⚙ 执行并验收」两路径共用；
      * 调用方负责 setSending(true)；完成/失败在此恢复发送态。
      */
     private void finishCollab(String runId, String judgeAlias, List<String> aliases) {
         try {
             var executed = enterpriseBridge.collabExecute(runId, null, aliases.get(0));
-            appendCollabSystem("③ 执行完成", truncateLines(executed.executionOutput(), 500));
+            // D7 Q4-A：执行输出全文内联（不再 500 字截断）
+            appendCollabSystem("③ 执行完成", executed.executionOutput());
             var reviewed = enterpriseBridge.collabReview(runId, judgeAlias);
             boolean pass = "done".equals(reviewed.status());
             appendCollabSystem("④ 验收：" + (pass ? "✅ 通过" : "⚠ 未通过（可在档案中重试）"),
@@ -1957,15 +1994,45 @@ public class OmniForgeApplication extends Application {
         inputArea.clear();
 
         // 企业版：Agent 在服务端执行（会话续接由 enterpriseSessionId 承载）；
-        // 对话优先：协作条开启时本次发送走多模型协作闭环，结果逐条回到本会话
+        // D7 方向 A：@提及自然发起（≥2 个 @ → 协作；无 @ → 普通对话/协作条显式路径）
         if (enterpriseBridge != null) {
             // D5 Q2/Q5：关键词命中直接产出草稿（不调模型、不占对话流）
             if (isDocDraftKeyword(text)) {
                 documentDraft();
                 return;
             }
+            var mention = com.omniforge.ui.collab.CollabMentionParser.parse(
+                    text, List.copyOf(collabModelChecks.keySet()));
+            if (!mention.unknownAliases().isEmpty() && mention.aliases().isEmpty()) {
+                inputArea.setText(text);
+                appendSystem("未找到模型 @" + String.join(" @", mention.unknownAliases())
+                        + "。可用：" + String.join("、", collabModelChecks.keySet()));
+                return;
+            }
+            if (mention.isCollab()) {
+                startEnterpriseCollab(text, mention.topic(), mention.aliases(),
+                        mention.template(), mention.rounds(), autoExecToggle.isSelected(), null);
+                return;
+            }
+            if (mention.isSingle()) {
+                inputArea.setText(text);
+                appendSystem("协作需要至少 2 个 @模型（如 @"
+                        + String.join(" @", collabModelChecks.keySet().stream().limit(2).toList())
+                        + "）；单模型请直接发送消息。");
+                return;
+            }
             if (collabComposerOn && collabComposer.isVisible()) {
-                startEnterpriseCollab(text);
+                String judge = collabJudge.getValue();
+                List<String> selected = new ArrayList<>(selectedCollabModels());
+                if (selected.size() < 2) {
+                    appendSystem("请至少勾选 2 个参与模型后再发起。");
+                    finishSend();
+                    return;
+                }
+                startEnterpriseCollab(text, text, selected,
+                        collabTemplate.getValue() == null ? "圆桌讨论" : collabTemplate.getValue(),
+                        parseCollabRounds(), autoExecToggle.isSelected(),
+                        judge == null || judge.startsWith("（") ? null : judge);
             } else {
                 startEnterpriseChat(text);
             }

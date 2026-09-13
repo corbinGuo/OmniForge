@@ -105,6 +105,9 @@ public interface EnterpriseBridge {
 
     String collabTranscript(String runId) throws Exception;
 
+    /** D7 Q6-B：全轮次结构化讨论记录 JSON（旧 run 返回 "{}"） */
+    String collabTranscriptData(String runId) throws Exception;
+
     CollabRunView collabCreate(String topic, List<String> aliases, String judgeAlias,
                                String mode, Integer maxRounds, Double maxCostUsd,
                                String systemText, String sessionId) throws Exception;

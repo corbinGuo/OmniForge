@@ -227,6 +227,11 @@ public class EnterpriseBridgeImpl implements EnterpriseBridge {
     }
 
     @Override
+    public String collabTranscriptData(String runId) throws Exception {
+        return guard(() -> manager.api().collabTranscriptData(runId));
+    }
+
+    @Override
     public com.omniforge.ui.enterprise.EnterpriseBridge.CollabRunView collabCreate(
             String topic, List<String> aliases, String judgeAlias, String mode,
             Integer maxRounds, Double maxCostUsd, String systemText, String sessionId)

@@ -763,6 +763,14 @@ public class EnterpriseApiClient {
         return response.body();
     }
 
+    /** D7 Q6-B：全轮次结构化讨论记录（旧 run 服务端返回 "{}"） */
+    public String collabTranscriptData(String runId) throws Exception {
+        HttpResponse<String> response = send("GET",
+                "/api/collab/runs/" + encode(runId) + "/transcript-data", null, 60);
+        requireOk(response, "讨论记录读取失败");
+        return response.body();
+    }
+
     /** 建运行 + 讨论（返回快照；systemText 为背景/角色指令，可空；sessionId 可空=不关联会话） */
     public CollabRunDto collabCreate(String topic, List<String> aliases, String judgeAlias,
                                      String mode, Integer maxRounds, Double maxCostUsd,
