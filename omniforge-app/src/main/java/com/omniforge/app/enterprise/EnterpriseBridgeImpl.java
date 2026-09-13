@@ -59,6 +59,16 @@ public class EnterpriseBridgeImpl implements EnterpriseBridge {
     }
 
     @Override
+    public List<SessionItem> refreshSessions() throws Exception {
+        return guard(() -> {
+            manager.refreshSessions();
+            return manager.sessions().stream()
+                    .map(session -> new SessionItem(session.id(), session.name(), session.createdAt()))
+                    .toList();
+        });
+    }
+
+    @Override
     public void renameSession(String sessionId, String name) throws Exception {
         try {
             manager.renameSession(sessionId, name);

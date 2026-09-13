@@ -607,11 +607,10 @@ public class OmniForgeApplication extends Application {
                 }
             });
             enterpriseSessionsList.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2) {
-                    var selected = enterpriseSessionsList.getSelectionModel().getSelectedItem();
-                    if (selected != null) {
-                        restoreEnterpriseSession(selected.id());
-                    }
+                // D8 反馈：单击即打开（对齐单机侧栏单击习惯；双击同样有效）
+                var selected = enterpriseSessionsList.getSelectionModel().getSelectedItem();
+                if (selected != null) {
+                    restoreEnterpriseSession(selected.id());
                 }
             });
             enterprisePane = new VBox(8, enterpriseNewButton, enterpriseActionRow, enterpriseSessionsList);
@@ -1175,10 +1174,14 @@ public class OmniForgeApplication extends Application {
         if (enterpriseBridge == null || enterpriseSessionsList == null) {
             return;
         }
-        var items = enterpriseBridge.sessions().stream()
-                .map(session -> new com.omniforge.ui.enterprise.EnterpriseBridge.SessionItem(
-                        session.id(), session.name(), session.createdAt()))
-                .toList();
+        // D8：强制重拉（原实现读登录缓存，协作新建的会话永远不出现）
+        List<com.omniforge.ui.enterprise.EnterpriseBridge.SessionItem> items;
+        try {
+            items = enterpriseBridge.refreshSessions();
+        } catch (Exception e) {
+            log.warn("会话列表刷新失败：{}", e.getMessage());
+            items = enterpriseBridge.sessions();
+        }
         enterpriseSessionsList.getItems().setAll(items);
         if (enterpriseSessionId == null) {
             enterpriseSessionsList.getSelectionModel().clearSelection();

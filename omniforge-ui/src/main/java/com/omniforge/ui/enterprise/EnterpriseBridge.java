@@ -42,6 +42,9 @@ public interface EnterpriseBridge {
     /** 会话缓存（时间倒序） */
     List<SessionItem> sessions();
 
+    /** D8：强制从服务端重拉会话列表（登录缓存之外的新会话要实时可见） */
+    List<SessionItem> refreshSessions() throws Exception;
+
     /** 重命名会话 */
     void renameSession(String sessionId, String name) throws Exception;
 
