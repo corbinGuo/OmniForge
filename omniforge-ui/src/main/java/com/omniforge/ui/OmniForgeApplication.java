@@ -1490,22 +1490,25 @@ public class OmniForgeApplication extends Application {
             legacy = null;
         }
         var result = com.omniforge.ui.collab.CollabTranscriptParser.parse(data, legacy);
-        String finalCaption = result.caption() == null ? "" : result.caption();
-        appendSystem("━━ ① 多模型讨论（" + template + " · " + aliases.size() + " 模型"
-                + (finalCaption.isBlank() ? "" : " · " + finalCaption) + "）━━");
-        if (result.singleFallback() != null) {
-            appendSystem(result.singleFallback());
-            return;
-        }
-        boolean multiRound = result.blocks().size() > 1;
-        for (var block : result.blocks()) {
-            if (multiRound && block.round() > 0) {
-                appendSystem("━━ 第 " + block.round() + " 轮 ━━");
+        // 数据抓取在虚拟线程；UI 渲染必须回 FX 线程（appendSystem/气泡直接操作场景图）
+        Platform.runLater(() -> {
+            String finalCaption = result.caption() == null ? "" : result.caption();
+            appendSystem("━━ ① 多模型讨论（" + template + " · " + aliases.size() + " 模型"
+                    + (finalCaption.isBlank() ? "" : " · " + finalCaption) + "）━━");
+            if (result.singleFallback() != null) {
+                appendSystem(result.singleFallback());
+                return;
             }
-            for (var statement : block.statements()) {
-                appendDebateBubble(statement.alias(), statement.text());
+            boolean multiRound = result.blocks().size() > 1;
+            for (var block : result.blocks()) {
+                if (multiRound && block.round() > 0) {
+                    appendSystem("━━ 第 " + block.round() + " 轮 ━━");
+                }
+                for (var statement : block.statements()) {
+                    appendDebateBubble(statement.alias(), statement.text());
+                }
             }
-        }
+        });
     }
 
     /**
