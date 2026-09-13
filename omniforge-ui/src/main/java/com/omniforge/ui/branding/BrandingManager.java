@@ -26,7 +26,7 @@ public final class BrandingManager {
     private static final String OVERRIDE_CSS_NAME = "branding-theme.css";
 
     /** 应用版本（与父 POM 一致；打包后可改读 Implementation-Version） */
-    public static final String APP_VERSION = "0.1.0";
+    public static final String APP_VERSION = "0.1.2";
 
     private static final BrandingSettingsStore store = new BrandingSettingsStore();
 

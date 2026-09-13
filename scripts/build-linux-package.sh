@@ -7,6 +7,8 @@
 #       （deb 内 postinst 自动注册 systemd 服务 omniforge.service）
 # ============================================================
 set -euo pipefail
+# 发布版本：CI 从 tag 推导传入（OMNIFORGE_APP_VERSION，缺省 0.1.0）
+OMNIFORGE_APP_VERSION="${OMNIFORGE_APP_VERSION:-0.1.0}"
 
 cd "$(dirname "$0")/.."
 
@@ -35,7 +37,7 @@ MAIN_JAR=$(basename "$(ls "$LIB_DIR"/omniforge-app-*.jar | head -1)")
 "$JAVA_HOME/bin/jpackage" \
     --type deb \
     --name omniforge \
-    --app-version 0.1.0 \
+    --app-version "$OMNIFORGE_APP_VERSION" \
     --vendor OmniForge \
     --description "OmniForge Core 社区版 - 跨平台多智能体协作 AI 工作台" \
     --input "$LIB_DIR" \

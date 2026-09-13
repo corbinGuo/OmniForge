@@ -40,6 +40,7 @@ jobs:
         run: |
           sudo apt-get update -y || true
           sudo apt-get install -y fakeroot || true
+          export OMNIFORGE_APP_VERSION="${GITHUB_REF_NAME#v}"
           bash scripts/build-linux-package.sh
 
       # ---------- macOS：dmg 优先（runner 无 GUI 时 hdiutil 常失败→降级 pkg），APP_IMAGE zip 兜底 ----------
@@ -55,8 +56,13 @@ jobs:
           # 否则 cfg 记录构建机绝对路径，产物在用户机器上无法启动
           cp omniforge-app/target/omniforge-app-*.jar "$LIB_DIR"/
           MAIN_JAR=$(basename "$(ls "$LIB_DIR"/omniforge-app-*.jar | head -1)")
-          # macOS CFBundleVersion 要求首段 >= 1，0.x.y 会被拒 → mac 侧映射：v0.1.0→1.0.0、v0.1.1→1.0.1（git 标签为准）
-          COMMON=(--name OmniForge --app-version 1.0.1 --vendor OmniForge
+          # macOS CFBundleVersion 要求首段 >= 1，0.x.y 会被拒 → 映射 v0.1.x → 1.0.x（从 tag 推导）
+          MAC_VERSION="1.0.${GITHUB_REF_NAME#v0.1.}"
+          case "$MAC_VERSION" in
+            1.0.[0-9]*) : ;;
+            *) MAC_VERSION="1.0.0" ;;  # 非 v0.1.x 形态（手动触发等）回落
+          esac
+          COMMON=(--name OmniForge --app-version "$MAC_VERSION" --vendor OmniForge
                   --description "OmniForge Core community edition"
                   --input "$LIB_DIR" --main-jar "$MAIN_JAR"
                   --main-class com.omniforge.app.OmniForgeLauncher
@@ -85,7 +91,12 @@ jobs:
           } else {
             Write-Warning 'WiX not found on runner — building APP_IMAGE only'
           }
-          mvn -B -ntp -P package $exeFlag -DskipTests -pl omniforge-app package
+          # 版本号从 tag 推导（v0.1.2 → 0.1.2），无 tag（手动触发）回落 POM 默认
+          $appVersion = ''
+          if ($env:GITHUB_REF_NAME -like 'v*') {
+            $appVersion = "-Domniforge.appVersion=" + $env:GITHUB_REF_NAME.Substring(1)
+          }
+          mvn -B -ntp -P package $exeFlag $appVersion -DskipTests -pl omniforge-app package
           Compress-Archive -Path omniforge-app/target/package/omniforge `
             -DestinationPath omniforge-app/target/package/omniforge-windows-appimage.zip -Force
 

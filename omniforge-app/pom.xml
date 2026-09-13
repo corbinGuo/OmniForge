@@ -12,6 +12,10 @@
 
     <artifactId>omniforge-app</artifactId>
     <name>OmniForge App</name>
+    <properties>
+        <!-- 发布版本（jpackage 产物命名/元数据）；CI 从 tag 推导：-Domniforge.appVersion=0.1.2 -->
+        <omniforge.appVersion>0.1.0</omniforge.appVersion>
+    </properties>
     <description>可执行装配（Apache 2.0）：Spring 上下文装配（全模块 autoconfiguration）、
         GUI 启动入口、配置默认值。Headless 入口与 jpackage 打包在 Phase 3</description>
 
@@ -169,7 +173,7 @@
                         </dependencies>
                         <configuration>
                             <name>omniforge</name>
-                            <appVersion>0.1.0</appVersion>
+                            <appVersion>${omniforge.appVersion}</appVersion>
                             <vendor>OmniForge</vendor>
                             <input>${project.build.directory}/lib</input>
                             <mainJar>${project.build.finalName}.jar</mainJar>
@@ -234,7 +238,7 @@
                         </dependencies>
                         <configuration>
                             <name>omniforge</name>
-                            <appVersion>0.1.0</appVersion>
+                            <appVersion>${omniforge.appVersion}</appVersion>
                             <vendor>OmniForge</vendor>
                             <input>${project.build.directory}/lib</input>
                             <mainJar>${project.build.finalName}.jar</mainJar>
