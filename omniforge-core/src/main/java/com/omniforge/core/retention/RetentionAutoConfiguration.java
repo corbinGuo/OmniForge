@@ -10,6 +10,7 @@ import com.omniforge.core.persistence.repository.SessionRepository;
 import com.omniforge.core.persistence.repository.ToolCallLogRepository;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,9 @@ import java.util.List;
         "com.omniforge.core.persistence.PersistenceAutoConfiguration",
         "com.omniforge.core.audit.AuditAutoConfiguration"})
 @ConditionalOnClass({SessionRepository.class, PersistenceProperties.class})
+// 企业版（PG）排除 PersistenceAutoConfiguration → PersistenceProperties Bean 不存在 →
+// 本模块整体跳过（Javadoc 所述语义；U10 后企业服务端首启实证缺此条件会启动失败）
+@ConditionalOnBean(PersistenceProperties.class)
 public class RetentionAutoConfiguration {
 
     /** 配置目录 = 主库文件父目录；:memory: 测试库无真实路径 → 回退临时目录 */
