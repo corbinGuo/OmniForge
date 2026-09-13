@@ -163,6 +163,17 @@ public class EnterpriseApiClient {
         return messages;
     }
 
+    /** D8：协作阶段消息落库（role 固定 collab；viewer 403 / 503 已在服务端标注） */
+    public void appendSessionMessage(String sessionId, String content) throws Exception {
+        String body = objectMapper.writeValueAsString(
+                objectMapper.createObjectNode().put("role", "collab").put("content", content));
+        HttpResponse<String> response = send("POST",
+                "/api/sessions/" + encode(sessionId) + "/messages", body, 30);
+        if (response.statusCode() != 200) {
+            throw statusError("协作记录落库失败", response);
+        }
+    }
+
     // ---------- 管理（P2-2）：/api/admin/*，需 role=admin（服务端 403 兜底） ----------
 
     public record DepartmentDto(String id, String name, long memberCount) {

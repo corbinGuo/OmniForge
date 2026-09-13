@@ -54,6 +54,9 @@ public interface EnterpriseBridge {
     /** 会话消息（恢复会话） */
     List<ChatMessage> messages(String sessionId) throws Exception;
 
+    /** D8：协作阶段消息落库（role 固定 collab；viewer 403） */
+    void appendSessionMessage(String sessionId, String content) throws Exception;
+
     /** 当前登录角色（P2-2：admin 显示「🏛 管理」入口；未登录 = ""） */
     String role();
 

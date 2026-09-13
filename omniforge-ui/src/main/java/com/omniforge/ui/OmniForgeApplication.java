@@ -1528,20 +1528,33 @@ public class OmniForgeApplication extends Application {
                 + (autoExec ? "，自动执行" : "，执行前需确认") + "）");
         Thread.ofVirtual().start(() -> {
             try {
-                // D5 Q1/Q6：传当前会话（新会话直接开协作时 enterpriseSessionId 为空 → 不关联）
+                // D5 Q1/Q6：传当前会话（新会话直接开协作时 enterpriseSessionId 为空 → 服务端自动建会话）
                 var run = enterpriseBridge.collabCreate(topic, aliasList,
                         judgeAlias, mode, rounds, 0.5, systemText, sessionIdAtSend);
-                renderDiscussion(run.id(), aliasList, template);
+                // D8 Q4-A：采纳新会话为当前会话（侧栏即时可见）
+                String runSession = run.sessionId();
+                if ((sessionIdAtSend == null || sessionIdAtSend.isBlank())
+                        && runSession != null && !runSession.isBlank()) {
+                    Platform.runLater(() -> {
+                        enterpriseSessionId = runSession;
+                        refreshEnterpriseSessions();
+                    });
+                }
+                final String persistId = runSession != null && !runSession.isBlank()
+                        ? runSession : sessionIdAtSend;
+                renderDiscussion(run.id(), aliasList, template, persistId);
                 String conclusionText;
                 try {
                     var concluded = enterpriseBridge.collabConclude(run.id());
                     conclusionText = concluded.conclusion();
+                    persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.stage(
+                            "━━ ② 结论 ━━\n" + conclusionText));
                 } catch (Exception concludeFailure) {
                     // D7 反馈：结论模型超时/异常（服务端已标 REVISED 可重试）→ 给出重试检查点而非整体失败
                     Platform.runLater(() -> {
                         setSending(false);
                         appendSystem("⚠ 结论生成失败（模型超时/异常）：" + concludeFailure.getMessage());
-                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend, true);
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, persistId, true);
                     });
                     return;
                 }
@@ -1549,11 +1562,11 @@ public class OmniForgeApplication extends Application {
                 if (!autoExec) {
                     Platform.runLater(() -> {
                         setSending(false);
-                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, sessionIdAtSend, false);
+                        appendCollabCheckpoint(run.id(), judgeAlias, aliasList, persistId, false);
                     });
                     return;
                 }
-                finishCollab(run.id(), judgeAlias, aliasList);
+                finishCollab(run.id(), judgeAlias, aliasList, persistId);
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     setSending(false);
@@ -1563,11 +1576,26 @@ public class OmniForgeApplication extends Application {
         });
     }
 
+    /** D8 Q5-A：协作阶段落库（fire-and-forget 虚拟线程；失败仅告警不中断协作流） */
+    private void persistCollabStage(String sessionId, String json) {
+        if (enterpriseBridge == null || sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        Thread.ofVirtual().start(() -> {
+            try {
+                enterpriseBridge.appendSessionMessage(sessionId, json);
+            } catch (Exception e) {
+                log.warn("协作阶段落库失败：{}", e.getMessage());
+            }
+        });
+    }
+
     /**
      * D7 方向 B：讨论记录全内联（Q3-A + Q6-B）。结构化 JSON → 每轮「━━ 第 N 轮 ━━」分隔 +
      * 每模型色点气泡全文；旧 run 回退 ◆ 段单层；再回退单全文气泡。不再 200 字摘要。
      */
-    private void renderDiscussion(String runId, List<String> aliases, String template) {
+    private void renderDiscussion(String runId, List<String> aliases, String template,
+                                  String persistId) {
         String data;
         String legacy;
         try {
@@ -1582,12 +1610,17 @@ public class OmniForgeApplication extends Application {
         }
         var result = com.omniforge.ui.collab.CollabTranscriptParser.parse(data, legacy);
         // 数据抓取在虚拟线程；UI 渲染必须回 FX 线程（appendSystem/气泡直接操作场景图）
+        // D8：渲染的同时逐条落库（statement 全文含轮次/别名）
         Platform.runLater(() -> {
             String finalCaption = result.caption() == null ? "" : result.caption();
-            appendSystem("━━ ① 多模型讨论（" + template + " · " + aliases.size() + " 模型"
-                    + (finalCaption.isBlank() ? "" : " · " + finalCaption) + "）━━");
+            String divider = "━━ ① 多模型讨论（" + template + " · " + aliases.size() + " 模型"
+                    + (finalCaption.isBlank() ? "" : " · " + finalCaption) + "）━━";
+            appendSystem(divider);
+            persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.stage(divider));
             if (result.singleFallback() != null) {
                 appendSystem(result.singleFallback());
+                persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.stage(
+                        result.singleFallback()));
                 return;
             }
             boolean multiRound = result.blocks().size() > 1;
@@ -1597,6 +1630,8 @@ public class OmniForgeApplication extends Application {
                 }
                 for (var statement : block.statements()) {
                     appendDebateBubble(statement.alias(), statement.text());
+                    persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.statement(
+                            statement.alias(), block.round(), statement.text()));
                 }
             }
         });
@@ -1606,15 +1641,20 @@ public class OmniForgeApplication extends Application {
      * ③执行 → ④验收 共用段（B1）：自动全链与手动「⚙ 执行并验收」两路径共用；
      * 调用方负责 setSending(true)；完成/失败在此恢复发送态。
      */
-    private void finishCollab(String runId, String judgeAlias, List<String> aliases) {
+    private void finishCollab(String runId, String judgeAlias, List<String> aliases, String persistId) {
         try {
             var executed = enterpriseBridge.collabExecute(runId, null, aliases.get(0));
-            // D7 Q4-A：执行输出全文内联（不再 500 字截断）
+            // D7 Q4-A：执行输出全文内联（不再 500 字截断）；D8：落库
             appendCollabSystem("③ 执行完成", executed.executionOutput());
+            persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.stage(
+                    "━━ ③ 执行完成 ━━\n" + executed.executionOutput()));
             var reviewed = enterpriseBridge.collabReview(runId, judgeAlias);
             boolean pass = "done".equals(reviewed.status());
+            String reviewText = "━━ ④ 验收：" + (pass ? "✅ 通过" : "⚠ 未通过（可在档案中重试）")
+                    + " ━━\n" + reviewed.reviewReason();
             appendCollabSystem("④ 验收：" + (pass ? "✅ 通过" : "⚠ 未通过（可在档案中重试）"),
                     reviewed.reviewReason());
+            persistCollabStage(persistId, com.omniforge.ui.collab.CollabStageMessage.stage(reviewText));
             Platform.runLater(() -> {
                 setSending(false);
                 appendSystem("✅ 本轮协作已完成，结论与结果已在上方；点「🗂 档案」可查看完整讨论/回看。");
@@ -1634,6 +1674,8 @@ public class OmniForgeApplication extends Application {
      */
     private void appendCollabCheckpoint(String runId, String judgeAlias, List<String> aliases,
                                         String sessionIdAtSend, boolean retryConclusion) {
+        persistCollabStage(sessionIdAtSend, com.omniforge.ui.collab.CollabStageMessage.checkpoint(
+                retryConclusion ? "⏸ 结论生成失败，等待重试或打住" : "⏸ 协作已暂停，等待确认执行"));
         hideEmptyState();
         Label label = new Label(retryConclusion
                 ? "⏸ 结论生成失败（模型超时/异常）：可重试结论，或就此打住稍后在 🗂 档案处理。"
@@ -1661,6 +1703,8 @@ public class OmniForgeApplication extends Application {
                 Thread.ofVirtual().start(() -> {
                     try {
                         var run = enterpriseBridge.collabConclude(runId);
+                        persistCollabStage(sessionIdAtSend, com.omniforge.ui.collab.CollabStageMessage.stage(
+                                "━━ ② 结论 ━━\n" + run.conclusion()));
                         Platform.runLater(() -> {
                             setSending(false);
                             appendCollabSystem("② 结论", run.conclusion());
@@ -1683,7 +1727,7 @@ public class OmniForgeApplication extends Application {
             }
             chatBox.getChildren().remove(checkpoint);
             setSending(true);
-            Thread.ofVirtual().start(() -> finishCollab(runId, judgeAlias, aliases));
+            Thread.ofVirtual().start(() -> finishCollab(runId, judgeAlias, aliases, sessionIdAtSend));
         });
         stop.setOnAction(event -> {
             chatBox.getChildren().remove(checkpoint);
@@ -2050,6 +2094,19 @@ public class OmniForgeApplication extends Application {
                     enterpriseSessionId = sessionId;
                     chatBox.getChildren().clear();
                     messages.forEach(message -> {
+                        // D8：协作阶段消息还原（statement=色点气泡；stage/checkpoint=系统样式；解析失败=平文本）
+                        if ("collab".equals(message.role())) {
+                            var stage = com.omniforge.ui.collab.CollabStageMessage.parse(message.content());
+                            if (stage != null && com.omniforge.ui.collab.CollabStageMessage.KIND_STATEMENT
+                                    .equals(stage.kind())) {
+                                appendDebateBubble(stage.alias(), stage.text());
+                            } else if (stage != null) {
+                                appendSystem(stage.text());
+                            } else {
+                                appendSystem(message.content());
+                            }
+                            return;
+                        }
                         ChatBubble bubble = appendBubble(
                                 "user".equals(message.role()) ? "user" : "assistant", message.content());
                         bubble.showActions(true); // 历史消息直接显示操作行

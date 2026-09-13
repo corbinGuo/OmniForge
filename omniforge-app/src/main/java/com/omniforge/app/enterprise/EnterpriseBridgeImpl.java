@@ -232,6 +232,14 @@ public class EnterpriseBridgeImpl implements EnterpriseBridge {
     }
 
     @Override
+    public void appendSessionMessage(String sessionId, String content) throws Exception {
+        guard(() -> {
+            manager.appendSessionMessage(sessionId, content);
+            return null;
+        });
+    }
+
+    @Override
     public com.omniforge.ui.enterprise.EnterpriseBridge.CollabRunView collabCreate(
             String topic, List<String> aliases, String judgeAlias, String mode,
             Integer maxRounds, Double maxCostUsd, String systemText, String sessionId)

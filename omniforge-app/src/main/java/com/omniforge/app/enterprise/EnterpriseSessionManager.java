@@ -114,6 +114,11 @@ public class EnterpriseSessionManager {
         return client.sessionMessages(sessionId);
     }
 
+    /** D8：协作阶段消息落库 */
+    public void appendSessionMessage(String sessionId, String content) throws Exception {
+        client.appendSessionMessage(sessionId, content);
+    }
+
     private void replaceInCache(EnterpriseApiClient.SessionSummary renamed) {
         for (int i = 0; i < sessions.size(); i++) {
             if (sessions.get(i).id().equals(renamed.id())) {
